@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-PT" data-bs-theme="dark" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Console N2</title>
+    <!-- Bootstrap 5 CSS via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            padding-top: 40px;
+            padding-bottom: 40px;
+            background-color: #121212;
+            height: 100vh;
+        }
+        .form-signin {
+            max-width: 400px;
+            padding: 15px;
+            margin: auto;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .ifce-brand {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<main class="form-signin text-center w-100">
+    <form th:action="@{/login}" method="post">
+        <h2 class="h3 mb-3 fw-normal">
+            <span class="ifce-brand">IFCE</span> Console N2
+        </h2>
+
+        <!-- Mensagem de Erro (Aparece se falhar o login) -->
+        <div th:if="${param.error}" class="alert alert-danger" role="alert">
+            Utilizador ou senha inválidos.
+        </div>
+
+        <!-- Mensagem de Logout -->
+        <div th:if="${param.logout}" class="alert alert-success" role="alert">
+            Sessão terminada com sucesso.
+        </div>
+
+        <div class="form-floating mb-3">
+            <input type="text" class="form-control" id="username" name="username" placeholder="admin" required>
+            <label for="username">Nome de Utilizador</label>
+        </div>
+        <div class="form-floating mb-3">
+            <input type="password" class="form-control" id="password" name="password" placeholder="Senha" required>
+            <label for="password">Senha</label>
+        </div>
+
+        <button class="w-100 btn btn-lg btn-success" type="submit">Entrar</button>
+        <p class="mt-5 mb-3 text-muted">Redes de Computadores II &copy; 2026</p>
+    </form>
+</main>
+</body>
+</html>
