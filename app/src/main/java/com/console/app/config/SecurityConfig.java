@@ -17,16 +17,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .authorizeHttpRequests((requests) -> requests
-                        .requestMatchers("/css/**", "/js/**", "/img/**").permitAll() // Liberta os ficheiros estáticos
-                        .anyRequest().authenticated() // Obriga a login para tudo o resto
+                .csrf(csrf -> csrf.disable()) // CSRF desativado para evitar o Erro 403
+                .authorizeHttpRequests(auth -> auth
+                        // 1. TODAS as rotas públicas juntas PRIMEIRO
+                        .requestMatchers("/login", "/css/**", "/js/**", "/img/**").permitAll()
+                        // 2. A regra geral "para o resto" SEMPRE NO FIM
+                        .anyRequest().authenticated()
                 )
-                .formLogin((form) -> form
+                .formLogin(form -> form
                         .loginPage("/login")
                         .defaultSuccessUrl("/dashboard", true)
                         .permitAll()
                 )
-                .logout((logout) -> logout
+                .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")
                         .permitAll()
                 );

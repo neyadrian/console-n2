@@ -16,7 +16,7 @@ public class SshIntegrationService {
     private String serverIp;
 
     @Value("${debian.server.ssh.user}")
-    private String sshUser;
+    private String sshUser = "vboxuser";
 
     // Caminho para a sua chave privada no Windows (ajuste se necessário)
     private final String privateKeyPath = System.getProperty("user.home") + "/.ssh/id_ed25519_redes_n1";
