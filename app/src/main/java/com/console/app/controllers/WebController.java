@@ -44,7 +44,9 @@ public class WebController {
 
     @GetMapping("/logs")
     public String viewLogs(Model model) {
-        String logsDebian = sshIntegrationService.executeCommand("tail -n 50 /var/log/syslog");
+        // Busca as últimas 50 linhas de log do sistema pelo journalctl
+        String logsDebian = sshIntegrationService.executeCommand("journalctl -n 50 --no-pager");
+
         model.addAttribute("logs", logsDebian);
         return "logs";
     }

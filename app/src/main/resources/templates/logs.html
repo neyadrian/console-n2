@@ -1,23 +1,61 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" data-bs-theme="dark" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logs Técnicos - Console N2</title>
-    <!-- Mantenha as mesmas importações de CSS/Bootstrap do dashboard -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background-color: #121212; color: white; }
+        .sidebar { min-height: 100vh; background-color: #1e1e1e; }
+        .nav-link { color: #adb5bd; padding: 12px 15px; margin-bottom: 5px; }
+        .nav-link.active, .nav-link:hover { color: #fff; background-color: #2b2b2b; border-radius: 6px; }
+        .card { background-color: #1e1e1e; border: 1px solid #333; }
+        .console-output { color: #00ff00; background-color: #000; padding: 15px; margin: 0; max-height: 600px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
+    </style>
 </head>
-<body class="bg-dark text-white">
-
-<!-- Insira a sua estrutura de menu lateral aqui -->
-
-<div class="content-wrapper p-4">
-    <h2 class="mb-4">Logs Técnicos do Sistema</h2>
-
-    <div class="card" style="background-color: #1e1e1e; border: 1px solid #333;">
-        <div class="card-header" style="border-bottom: 1px solid #333;">
-            Visualizando: <code>/var/log/syslog</code>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Menu Lateral -->
+        <div class="col-md-3 col-lg-2 px-0 sidebar d-flex flex-column border-end border-secondary">
+            <div class="p-3 text-center border-bottom border-secondary mb-3">
+                <h5 class="text-success fw-bold mb-0">IFCE Console</h5>
+                <small class="text-muted">N2 - Redes II</small>
+            </div>
+            <ul class="nav flex-column px-2">
+                <li class="nav-item"><a th:href="@{/dashboard}" class="nav-link"><i class="bi bi-house-door me-2"></i> Visão Geral</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-hdd-network me-2"></i> Serviços</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-folder me-2"></i> Arquivos (FTP)</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-envelope me-2"></i> E-mail</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-terminal me-2"></i> Acesso SSH</a></li>
+                <li class="nav-item"><a th:href="@{/logs}" class="nav-link active"><i class="bi bi-journal-text me-2"></i> Logs Técnicos</a></li>
+            </ul>
+            <div class="mt-auto p-3 border-top border-secondary">
+                <small class="d-block text-muted mb-2 text-center">Autenticado como: <b>admin</b></small>
+                <form th:action="@{/logout}" method="post">
+                    <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-box-arrow-right"></i> Sair</button>
+                </form>
+            </div>
         </div>
-        <div class="card-body p-0">
-            <!-- A tag <pre> respeita as quebras de linha que vêm do Linux -->
-            <pre th:text="${logs}" style="color: #00ff00; background-color: #000; padding: 20px; margin: 0; max-height: 600px; overflow-y: auto; font-family: monospace;"></pre>
+
+        <!-- Conteúdo Principal -->
+        <div class="col-md-9 col-lg-10 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Logs Técnicos do Sistema</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+                    <span>Visualizando: <code>journalctl</code> (Eventos do Sistema)</span>
+                    <!-- Botão para recarregar os logs rapidamente -->
+                    <a th:href="@{/logs}" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-clockwise"></i> Atualizar Logs</a>
+                </div>
+                <div class="card-body p-0">
+                    <pre class="console-output" th:text="${logs}">Nenhum log encontrado...</pre>
+                </div>
+            </div>
         </div>
     </div>
 </div>
