@@ -1,6 +1,7 @@
 package com.console.app.controllers;
 
 import com.console.app.services.DebianMetricsService;
+import com.console.app.services.SshIntegrationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -8,6 +9,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class WebController {
+
+    @Autowired
+    private SshIntegrationService sshIntegrationService;
 
     @Autowired
     private DebianMetricsService metricsService;
@@ -36,5 +40,12 @@ public class WebController {
 
         // Recarrega o Dashboard automaticamente após enviar o comando
         return "redirect:/dashboard";
+    }
+
+    @GetMapping("/logs")
+    public String viewLogs(Model model) {
+        String logsDebian = sshIntegrationService.executeCommand("tail -n 50 /var/log/syslog");
+        model.addAttribute("logs", logsDebian);
+        return "logs";
     }
 }

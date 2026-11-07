@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.util.Properties;
 import java.util.Scanner;
 
 @Service
@@ -15,34 +16,29 @@ public class SshIntegrationService {
     @Value("${debian.server.ip}")
     private String serverIp;
 
-    private String sshUser = "vboxuser";
-
-    // Caminho para a sua chave privada no Windows (ajuste se necessário)
-    private final String privateKeyPath = System.getProperty("user.home") + "/.ssh/id_ed25519_redes_n1";
+    private String sshUser = "n2user";
 
     public String executeCommand(String command) {
         try {
             JSch jsch = new JSch();
 
-            // 1. COMENTE OU APAGUE A LINHA DA CHAVE:
-            // jsch.addIdentity(privateKeyPath);
-
             Session session = jsch.getSession(sshUser, serverIp, 22);
+            session.setPassword("123456");
 
-            // 2. ADICIONE A SENHA DIRETAMENTE AQUI (coloque a senha real do seu Debian):
-            session.setPassword("123");
+            // Configurações para ignorar host key e FORÇAR apenas senha
+            Properties config = new Properties();
+            config.put("StrictHostKeyChecking", "no");
+            config.put("PreferredAuthentications", "password");
+            session.setConfig(config);
 
-            session.setConfig("StrictHostKeyChecking", "no");
             session.connect(5000);
 
-            // ... (o resto do código fica exatamente igual)
             ChannelExec channel = (ChannelExec) session.openChannel("exec");
             channel.setCommand(command);
 
             InputStream in = channel.getInputStream();
             channel.connect();
 
-            // Lê a resposta do comando Linux
             Scanner scanner = new Scanner(in).useDelimiter("\\A");
             String response = scanner.hasNext() ? scanner.next() : "";
 

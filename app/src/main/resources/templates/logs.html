@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Logs Técnicos - Console N2</title>
+    <!-- Mantenha as mesmas importações de CSS/Bootstrap do dashboard -->
+</head>
+<body class="bg-dark text-white">
+
+<!-- Insira a sua estrutura de menu lateral aqui -->
+
+<div class="content-wrapper p-4">
+    <h2 class="mb-4">Logs Técnicos do Sistema</h2>
+
+    <div class="card" style="background-color: #1e1e1e; border: 1px solid #333;">
+        <div class="card-header" style="border-bottom: 1px solid #333;">
+            Visualizando: <code>/var/log/syslog</code>
+        </div>
+        <div class="card-body p-0">
+            <!-- A tag <pre> respeita as quebras de linha que vêm do Linux -->
+            <pre th:text="${logs}" style="color: #00ff00; background-color: #000; padding: 20px; margin: 0; max-height: 600px; overflow-y: auto; font-family: monospace;"></pre>
+        </div>
+    </div>
+</div>
+</body>
+</html>
