@@ -1,20 +1,29 @@
 package com.console.app.controllers;
 
 import com.console.app.services.DebianMetricsService;
+import com.console.app.services.FtpService;
 import com.console.app.services.SshIntegrationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @Controller
 public class WebController {
 
     @Autowired
-    private SshIntegrationService sshIntegrationService;
+    private SshIntegrationService sshService;
 
     @Autowired
     private DebianMetricsService metricsService;
+
+    @Autowired
+    private FtpService ftpService;
 
     @GetMapping("/login")
     public String login() {
@@ -23,31 +32,48 @@ public class WebController {
 
     @GetMapping({"", "/", "/dashboard"})
     public String dashboard(Model model) {
-        // Envia as métricas reais lidas do Debian para o HTML com o nome "metricas"
         model.addAttribute("metricas", metricsService.getMetrics());
         return "dashboard";
     }
 
-    @Autowired
-    private com.console.app.services.SshIntegrationService sshService;
-
-    @org.springframework.web.bind.annotation.PostMapping("/alterar-hostname")
-    public String alterarHostname(@org.springframework.web.bind.annotation.RequestParam String novoNome) {
-        // ATENÇÃO: Substitua '123' pela senha real do usuário administrador do seu Debian
-        String comando = "echo '123' | sudo -S hostnamectl set-hostname " + novoNome;
-
-        sshService.executeCommand(comando);
-
-        // Recarrega o Dashboard automaticamente após enviar o comando
-        return "redirect:/dashboard";
-    }
-
     @GetMapping("/logs")
     public String viewLogs(Model model) {
-        // Busca as últimas 50 linhas de log do sistema pelo journalctl
-        String logsDebian = sshIntegrationService.executeCommand("journalctl -n 50 --no-pager");
-
+        String logsDebian = sshService.executeCommand("journalctl -n 50 --no-pager");
         model.addAttribute("logs", logsDebian);
         return "logs";
+    }
+
+    @GetMapping("/ssh")
+    public String sshPage(Model model) {
+        String currentHost = sshService.getCurrentHostname();
+        model.addAttribute("currentHost", currentHost);
+        return "ssh";
+    }
+
+    @PostMapping("/ssh/update-hostname")
+    public String updateHostname(@RequestParam("newHostname") String newHostname, Model model) {
+        String result = sshService.updateHostname(newHostname);
+        model.addAttribute("message", "Operação concluída. Resultado: " + result);
+        model.addAttribute("currentHost", sshService.getCurrentHostname());
+        return "ssh";
+    }
+
+    @GetMapping("/arquivos")
+    public String arquivosPage(Model model) {
+        List<String> arquivos = ftpService.listFiles();
+        model.addAttribute("arquivos", arquivos);
+        return "arquivos";
+    }
+
+    @PostMapping("/arquivos/upload")
+    public String uploadArquivo(@RequestParam("file") MultipartFile file, Model model) {
+        boolean success = ftpService.uploadFile(file);
+        if (success) {
+            model.addAttribute("message", "Arquivo enviado com sucesso para o vsftpd!");
+        } else {
+            model.addAttribute("error", "Falha ao enviar o arquivo via FTP.");
+        }
+        model.addAttribute("arquivos", ftpService.listFiles());
+        return "arquivos";
     }
 }

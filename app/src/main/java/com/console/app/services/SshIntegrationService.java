@@ -1,60 +1,63 @@
 package com.console.app.services;
 
-import com.jcraft.jsch.*;
-import org.springframework.beans.factory.annotation.Value;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
-import java.util.Properties;
-import java.util.Scanner;
+import java.io.InputStreamReader;
 
 @Service
 public class SshIntegrationService {
 
-    @Value("${debian.server.ip}")
-    private String serverIp;
+    private String host = "192.168.100.10";
+    private String user = "vboxuser";
+    private String password = "123456"; // Ou a sua senha configurada
 
-    // Certifique-se de que são estas as credenciais que criou no Debian!
-    private String sshUser = "vboxuser";
-    private String sshPassword = "123456";
-
+    // Método genérico para executar comandos SSH
     public String executeCommand(String command) {
+        StringBuilder output = new StringBuilder();
         try {
             JSch jsch = new JSch();
-            Session session = jsch.getSession(sshUser, serverIp, 22);
-
-            // A SOLUÇÃO DEFINITIVA: Responde aos prompts do servidor automaticamente
-            session.setUserInfo(new UserInfo() {
-                @Override public String getPassphrase() { return null; }
-                @Override public String getPassword() { return sshPassword; }
-                @Override public boolean promptPassword(String message) { return true; }
-                @Override public boolean promptPassphrase(String message) { return false; }
-                @Override public boolean promptYesNo(String message) { return true; }
-                @Override public void showMessage(String message) {}
-            });
-
-            Properties config = new Properties();
-            config.put("StrictHostKeyChecking", "no");
-            config.put("PreferredAuthentications", "password,keyboard-interactive");
-            session.setConfig(config);
-
-            session.connect(5000);
+            Session session = jsch.getSession(user, host, 22);
+            session.setPassword(password);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect(10000);
 
             ChannelExec channel = (ChannelExec) session.openChannel("exec");
             channel.setCommand(command);
+
             InputStream in = channel.getInputStream();
             channel.connect();
 
-            Scanner scanner = new Scanner(in).useDelimiter("\\A");
-            String response = scanner.hasNext() ? scanner.next() : "";
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
 
             channel.disconnect();
             session.disconnect();
-
-            return response.trim();
         } catch (Exception e) {
-            System.err.println("Erro ao executar comando SSH: " + e.getMessage());
-            return "Erro de conexão";
+            output.append("Erro ao executar comando SSH: ").append(e.getMessage());
         }
+        return output.toString().trim();
+    }
+
+    // Consulta o hostname estático atual do Debian
+    public String getCurrentHostname() {
+        return executeCommand("hostnamectl --static");
+    }
+
+    // Altera o hostname no Debian com privilégios sudo
+    public String updateHostname(String newHostname) {
+        // Validação simples para evitar caracteres indesejados
+        if (newHostname == null || !newHostname.matches("^[a-zA-Z0-9-]+$")) {
+            return "Erro: Nome de host inválido.";
+        }
+        String command = "echo " + password + " | sudo -S hostnamectl set-hostname " + newHostname;
+        return executeCommand(command);
     }
 }
