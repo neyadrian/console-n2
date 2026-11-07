@@ -1,8 +1,6 @@
 package com.console.app.services;
 
-import com.jcraft.jsch.ChannelExec;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.Session;
+import com.jcraft.jsch.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,26 +14,34 @@ public class SshIntegrationService {
     @Value("${debian.server.ip}")
     private String serverIp;
 
-    private String sshUser = "n2user";
+    // Certifique-se de que são estas as credenciais que criou no Debian!
+    private String sshUser = "vboxuser";
+    private String sshPassword = "123456";
 
     public String executeCommand(String command) {
         try {
             JSch jsch = new JSch();
-
             Session session = jsch.getSession(sshUser, serverIp, 22);
-            session.setPassword("123456");
 
-            // Configurações para ignorar host key e FORÇAR apenas senha
+            // A SOLUÇÃO DEFINITIVA: Responde aos prompts do servidor automaticamente
+            session.setUserInfo(new UserInfo() {
+                @Override public String getPassphrase() { return null; }
+                @Override public String getPassword() { return sshPassword; }
+                @Override public boolean promptPassword(String message) { return true; }
+                @Override public boolean promptPassphrase(String message) { return false; }
+                @Override public boolean promptYesNo(String message) { return true; }
+                @Override public void showMessage(String message) {}
+            });
+
             Properties config = new Properties();
             config.put("StrictHostKeyChecking", "no");
-            config.put("PreferredAuthentications", "password");
+            config.put("PreferredAuthentications", "password,keyboard-interactive");
             session.setConfig(config);
 
             session.connect(5000);
 
             ChannelExec channel = (ChannelExec) session.openChannel("exec");
             channel.setCommand(command);
-
             InputStream in = channel.getInputStream();
             channel.connect();
 
