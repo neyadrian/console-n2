@@ -1,6 +1,7 @@
 package com.console.app.controllers;
 
 import com.console.app.services.DebianMetricsService;
+import com.console.app.services.EmailService;
 import com.console.app.services.FtpService;
 import com.console.app.services.SshIntegrationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,9 @@ public class WebController {
 
     @Autowired
     private DebianMetricsService metricsService;
+
+    @Autowired
+    private EmailService emailService;
 
     @Autowired
     private FtpService ftpService;
@@ -75,5 +79,25 @@ public class WebController {
         }
         model.addAttribute("arquivos", ftpService.listFiles());
         return "arquivos";
+    }
+
+    @GetMapping("/email")
+    public String paginaEmail() {
+        return "email";
+    }
+
+    @PostMapping("/enviar-email")
+    public String enviarEmail(
+            @RequestParam("destinatario") String destinatario,
+            @RequestParam("assunto") String assunto,
+            @RequestParam("mensagem") String mensagem,
+            Model model) {
+        try {
+            emailService.enviarEmail(destinatario, assunto, mensagem);
+            model.addAttribute("sucesso", "E-mail enviado com sucesso para " + destinatario);
+        } catch (Exception e) {
+            model.addAttribute("erro", "Falha ao enviar e-mail: " + e.getMessage());
+        }
+        return "email";
     }
 }
