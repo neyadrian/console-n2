@@ -71,7 +71,7 @@ public class WebController {
 
     @PostMapping("/arquivos/upload")
     public String uploadArquivo(@RequestParam("file") MultipartFile file, Model model) {
-        boolean success = ftpService.uploadFile(file);
+        boolean success = ftpService.enviarArquivo(file);
         if (success) {
             model.addAttribute("message", "Arquivo enviado com sucesso para o vsftpd!");
         } else {

@@ -7,18 +7,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class FtpService {
 
-    private String server = "192.168.100.10";
-    private int port = 21;
-    private String user = "ftpuser"; // Altere se o seu utilizador FTP no Debian for diferente
-    private String pass = "123456";  // Senha do utilizador FTP
+    private final String server = "192.168.100.10";
+    private final int port = 21;
+    private final String user = "ftpuser";
+    private final String pass = "sua_senha";
 
-    // Faz o upload do arquivo recebido pelo formulário web para o diretório /arquivos/ do FTP
     public boolean uploadFile(MultipartFile file) {
         FTPClient ftpClient = new FTPClient();
         try {
@@ -27,15 +27,14 @@ public class FtpService {
             ftpClient.enterLocalPassiveMode();
             ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
 
-            // Entra na pasta remota de publicação configurada na N1
-            ftpClient.changeWorkingDirectory("/arquivos");
-
             InputStream inputStream = file.getInputStream();
-            boolean done = ftpClient.storeFile(file.getOriginalFilename(), inputStream);
-            inputStream.close();
+            String remotePath = "/arquivos/" + file.getOriginalFilename();
 
+            boolean done = ftpClient.storeFile(remotePath, inputStream);
+            inputStream.close();
             ftpClient.logout();
             ftpClient.disconnect();
+
             return done;
         } catch (Exception e) {
             e.printStackTrace();
@@ -43,7 +42,6 @@ public class FtpService {
         }
     }
 
-    // Lista os arquivos presentes no diretório /arquivos/ do servidor FTP
     public List<String> listFiles() {
         List<String> fileList = new ArrayList<>();
         FTPClient ftpClient = new FTPClient();
@@ -52,11 +50,11 @@ public class FtpService {
             ftpClient.login(user, pass);
             ftpClient.enterLocalPassiveMode();
 
-            FTPFile[] files = ftpClient.listFiles("/arquivos");
+            FTPFile[] files = ftpClient.listFiles("/arquivos/");
             if (files != null) {
                 for (FTPFile file : files) {
                     if (file.isFile()) {
-                        fileList.add(file.getName() + " (" + file.getSize() + " bytes)");
+                        fileList.add(file.getName());
                     }
                 }
             }
@@ -66,5 +64,26 @@ public class FtpService {
             e.printStackTrace();
         }
         return fileList;
+    }
+
+    public String calcularSha256(InputStream inputStream) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] byteBuffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(byteBuffer)) != -1) {
+                digest.update(byteBuffer, 0, bytesRead);
+            }
+            byte[] hashedBytes = digest.digest();
+
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashedBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Erro ao calcular hash";
+        }
     }
 }
