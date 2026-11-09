@@ -47,21 +47,6 @@ public class WebController {
         return "logs";
     }
 
-    @GetMapping("/ssh")
-    public String sshPage(Model model) {
-        String currentHost = sshService.getCurrentHostname();
-        model.addAttribute("currentHost", currentHost);
-        return "ssh";
-    }
-
-    @PostMapping("/ssh/update-hostname")
-    public String updateHostname(@RequestParam("newHostname") String newHostname, Model model) {
-        String result = sshService.updateHostname(newHostname);
-        model.addAttribute("message", "Operação concluída. Resultado: " + result);
-        model.addAttribute("currentHost", sshService.getCurrentHostname());
-        return "ssh";
-    }
-
     @GetMapping("/arquivos")
     public String arquivosPage(Model model) {
         List<String> arquivos = ftpService.listFiles();
@@ -71,7 +56,7 @@ public class WebController {
 
     @PostMapping("/arquivos/upload")
     public String uploadArquivo(@RequestParam("file") MultipartFile file, Model model) {
-        boolean success = ftpService.enviarArquivo(file);
+        boolean success = ftpService.uploadFile(file);
         if (success) {
             model.addAttribute("message", "Arquivo enviado com sucesso para o vsftpd!");
         } else {
