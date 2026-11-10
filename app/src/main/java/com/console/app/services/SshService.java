@@ -31,14 +31,7 @@ public class SshService {
     @Value("${debian.server.ssh.password:123456}")
     private String password;
 
-    private final Object lock = new Object();
-    private Session persistentSession = null;
     private volatile String originalHostname = null;
-
-    // Cache simples de métricas para não sobrecarregar a VM Debian com requisições repetidas
-    private volatile Map<String, String> cachedMetrics = null;
-    private volatile long lastMetricsTime = 0;
-    private static final long CACHE_TTL_MS = 3000; // 3 segundos de cache
 
     public String getCurrentHostname() {
         String h = executeCommand("hostnamectl --static 2>/dev/null || hostname");
@@ -67,7 +60,6 @@ public class SshService {
         if (res.startsWith("Erro")) {
             return res;
         }
-        cachedMetrics = null; // Invalida o cache
         return "Hostname alterado para: " + newHostname;
     }
 
@@ -81,19 +73,13 @@ public class SshService {
         if (res.startsWith("Erro")) {
             return res;
         }
-        cachedMetrics = null; // Invalida o cache
         return "Hostname restaurado com sucesso para: " + original;
     }
 
     public Map<String, String> getMetrics() {
-        long now = System.currentTimeMillis();
-        if (cachedMetrics != null && (now - lastMetricsTime < CACHE_TTL_MS)) {
-            return cachedMetrics;
-        }
-
         Map<String, String> metrics = new HashMap<>();
 
-        // Script super leve: mede CPU em 100ms via /proc/stat sem invocar 'top', 'vmstat' ou comandos pesados
+        // Script super leve de 100ms sem sobrecarga de VM
         String script = "read c u n s i w x y z < /proc/stat; "
                 + "t1=$((u+n+s+i+w+x+y+z)); id1=$i; "
                 + "sleep 0.1; "
@@ -161,153 +147,135 @@ public class SshService {
         metrics.put("svc_dovecot", valueOf(output, "SVC_dovecot"));
         metrics.put("svc_ssh", valueOf(output, "SVC_ssh"));
 
-        cachedMetrics = metrics;
-        lastMetricsTime = System.currentTimeMillis();
         return metrics;
     }
 
     public String executeCommand(String command) {
-        synchronized (lock) {
-            for (int attempt = 1; attempt <= 2; attempt++) {
-                Session session = null;
-                ChannelExec channel = null;
-                try {
-                    session = getOrCreateSession();
-                    channel = (ChannelExec) session.openChannel("exec");
-                    channel.setCommand(command);
+        String lastError = null;
 
-                    InputStream in = channel.getInputStream();
-                    InputStream err = channel.getErrStream();
+        // Tenta executar criando conexão limpa e fresca. Se falhar por oscilação momentânea, tenta mais uma vez
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            Session session = null;
+            ChannelExec channel = null;
+            try {
+                session = openFreshSession();
+                channel = (ChannelExec) session.openChannel("exec");
+                channel.setCommand(command);
 
-                    channel.connect(5000);
+                InputStream in = channel.getInputStream();
+                InputStream err = channel.getErrStream();
 
-                    ByteArrayOutputStream outStream = new ByteArrayOutputStream();
-                    ByteArrayOutputStream errStream = new ByteArrayOutputStream();
-                    byte[] tmp = new byte[1024];
+                channel.connect(4000);
 
-                    long deadline = System.currentTimeMillis() + 6000;
-                    while (System.currentTimeMillis() < deadline) {
-                        while (in.available() > 0) {
-                            int i = in.read(tmp, 0, 1024);
-                            if (i < 0) break;
-                            outStream.write(tmp, 0, i);
-                        }
-                        while (err.available() > 0) {
-                            int i = err.read(tmp, 0, 1024);
-                            if (i < 0) break;
-                            errStream.write(tmp, 0, i);
-                        }
-                        if (channel.isClosed()) {
-                            if (in.available() > 0 || err.available() > 0) continue;
-                            break;
-                        }
-                        Thread.sleep(25);
+                ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+                ByteArrayOutputStream errStream = new ByteArrayOutputStream();
+                byte[] tmp = new byte[1024];
+
+                long deadline = System.currentTimeMillis() + 5000;
+                while (System.currentTimeMillis() < deadline) {
+                    while (in.available() > 0) {
+                        int i = in.read(tmp, 0, 1024);
+                        if (i < 0) break;
+                        outStream.write(tmp, 0, i);
                     }
-
-                    String stdout = outStream.toString("UTF-8").trim();
-                    String stderr = errStream.toString("UTF-8").trim();
-
-                    if (!stderr.isEmpty() && stdout.isEmpty() && !stderr.contains("password")) {
-                        return "Erro SSH: " + stderr;
+                    while (err.available() > 0) {
+                        int i = err.read(tmp, 0, 1024);
+                        if (i < 0) break;
+                        errStream.write(tmp, 0, i);
                     }
+                    if (channel.isClosed()) {
+                        if (in.available() > 0 || err.available() > 0) continue;
+                        break;
+                    }
+                    Thread.sleep(20);
+                }
 
-                    return stdout;
-                } catch (Exception e) {
-                    closeSession();
-                    if (attempt == 2) {
-                        return "Erro SSH: " + e.getMessage();
-                    }
-                } finally {
-                    if (channel != null && channel.isConnected()) {
-                        channel.disconnect();
-                    }
+                String stdout = outStream.toString("UTF-8").trim();
+                String stderr = errStream.toString("UTF-8").trim();
+
+                if (!stderr.isEmpty() && stdout.isEmpty() && !stderr.contains("password")) {
+                    return "Erro SSH: " + stderr;
+                }
+
+                return stdout;
+
+            } catch (Exception e) {
+                lastError = e.getMessage();
+                if (attempt == 1) {
+                    try { Thread.sleep(150); } catch (Exception ignored) {}
+                }
+            } finally {
+                if (channel != null && channel.isConnected()) {
+                    try { channel.disconnect(); } catch (Exception ignored) {}
+                }
+                if (session != null && session.isConnected()) {
+                    try { session.disconnect(); } catch (Exception ignored) {}
                 }
             }
-            return "Erro SSH: falha de comunicação com o Debian.";
         }
+        return "Erro SSH: " + (lastError != null ? lastError : "timeout ou perda de comunicação com 192.168.100.10:22");
     }
 
     public String uploadSftp(String remoteDir, String filename, InputStream inputStream) {
-        synchronized (lock) {
-            Session session = null;
-            ChannelSftp sftp = null;
-            try {
-                session = getOrCreateSession();
-                sftp = (ChannelSftp) session.openChannel("sftp");
-                sftp.connect(6000);
-                ensureDir(sftp, remoteDir);
-                sftp.cd(remoteDir);
-                sftp.put(inputStream, filename);
-                return null;
-            } catch (Exception e) {
-                return "Falha SFTP: " + e.getMessage();
-            } finally {
-                if (sftp != null && sftp.isConnected()) {
-                    sftp.disconnect();
-                }
+        Session session = null;
+        ChannelSftp sftp = null;
+        try {
+            session = openFreshSession();
+            sftp = (ChannelSftp) session.openChannel("sftp");
+            sftp.connect(5000);
+            ensureDir(sftp, remoteDir);
+            sftp.cd(remoteDir);
+            sftp.put(inputStream, filename);
+            return null;
+        } catch (Exception e) {
+            return "Falha SFTP: " + e.getMessage();
+        } finally {
+            if (sftp != null && sftp.isConnected()) {
+                try { sftp.disconnect(); } catch (Exception ignored) {}
+            }
+            if (session != null && session.isConnected()) {
+                try { session.disconnect(); } catch (Exception ignored) {}
             }
         }
     }
 
     public List<String> listSftp(String remoteDir) {
         List<String> files = new ArrayList<>();
-        synchronized (lock) {
-            Session session = null;
-            ChannelSftp sftp = null;
-            try {
-                session = getOrCreateSession();
-                sftp = (ChannelSftp) session.openChannel("sftp");
-                sftp.connect(6000);
-                Vector<?> entries = sftp.ls(remoteDir);
-                for (Object entry : entries) {
-                    ChannelSftp.LsEntry ls = (ChannelSftp.LsEntry) entry;
-                    if (!ls.getAttrs().isDir() && !ls.getFilename().startsWith(".")) {
-                        files.add(ls.getFilename());
-                    }
+        Session session = null;
+        ChannelSftp sftp = null;
+        try {
+            session = openFreshSession();
+            sftp = (ChannelSftp) session.openChannel("sftp");
+            sftp.connect(5000);
+            Vector<?> entries = sftp.ls(remoteDir);
+            for (Object entry : entries) {
+                ChannelSftp.LsEntry ls = (ChannelSftp.LsEntry) entry;
+                if (!ls.getAttrs().isDir() && !ls.getFilename().startsWith(".")) {
+                    files.add(ls.getFilename());
                 }
-            } catch (Exception ignored) {
-            } finally {
-                if (sftp != null && sftp.isConnected()) {
-                    sftp.disconnect();
-                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (sftp != null && sftp.isConnected()) {
+                try { sftp.disconnect(); } catch (Exception ignored) {}
+            }
+            if (session != null && session.isConnected()) {
+                try { session.disconnect(); } catch (Exception ignored) {}
             }
         }
         return files;
     }
 
-    private Session getOrCreateSession() throws Exception {
-        if (persistentSession != null && persistentSession.isConnected()) {
-            try {
-                persistentSession.sendKeepAliveMsg();
-                return persistentSession;
-            } catch (Exception e) {
-                closeSession();
-            }
-        }
-
+    private Session openFreshSession() throws Exception {
         JSch jsch = new JSch();
         Session session = jsch.getSession(user, host, port);
         session.setPassword(password);
         session.setConfig("StrictHostKeyChecking", "no");
         session.setConfig("PreferredAuthentications", "password");
         session.setConfig("TCPKeepAlive", "yes");
-        session.setServerAliveInterval(15);
-        session.setServerAliveCountMax(3);
-        session.setTimeout(8000);
-        session.connect(7000);
-
-        persistentSession = session;
-        return persistentSession;
-    }
-
-    private void closeSession() {
-        if (persistentSession != null) {
-            try {
-                persistentSession.disconnect();
-            } catch (Exception ignored) {
-            }
-            persistentSession = null;
-        }
+        session.setTimeout(6000);
+        session.connect(5000);
+        return session;
     }
 
     private void ensureDir(ChannelSftp sftp, String remoteDir) throws SftpException {

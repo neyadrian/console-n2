@@ -235,7 +235,11 @@
                     document.getElementById('srv-hostname').innerText = data.hostname;
                 }
 
-                if (data.sshOk === false || String(data.cpu).startsWith('Sem SSH') || String(data.cpu).startsWith('Erro')) {
+                const hasValidNumbers = !String(data.cpu).startsWith('Sem SSH') && !String(data.cpu).startsWith('Erro') && !String(data.cpu).startsWith('...');
+
+                if (data.sshOk === false && !hasValidNumbers) {
+                    document.getElementById('ssh-alerta').className = 'alert alert-danger py-2 mb-3';
+                    document.getElementById('ssh-alerta').innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i><strong>Perda de comunicação SSH:</strong> Tentando reconectar ao Debian...';
                     document.getElementById('ssh-alerta').classList.remove('d-none');
                     document.getElementById('val-cpu').innerText = 'Sem SSH';
                     document.getElementById('val-ram').innerText = 'Sem SSH';
@@ -243,7 +247,14 @@
                     document.getElementById('val-uptime').innerText = data.uptime || 'Sem SSH';
                     document.getElementById('val-ram-detalhes').innerText = 'Falha de comunicação SSH';
                 } else {
-                    document.getElementById('ssh-alerta').classList.add('d-none');
+                    if (data.desatualizado) {
+                        document.getElementById('ssh-alerta').className = 'alert alert-warning py-2 mb-3';
+                        document.getElementById('ssh-alerta').innerHTML = '<i class="bi bi-clock-history me-2"></i><strong>Aviso:</strong> Exibindo dados da última coleta. Atualizando conexão com o Debian...';
+                        document.getElementById('ssh-alerta').classList.remove('d-none');
+                    } else {
+                        document.getElementById('ssh-alerta').classList.add('d-none');
+                    }
+
                     const cpuLimpa = parseFloat(String(data.cpu).replace('%', '')) || 0;
                     const ramLimpa = parseFloat(String(data.ram).replace('%', '')) || 0;
 

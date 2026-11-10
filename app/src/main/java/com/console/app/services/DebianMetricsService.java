@@ -21,20 +21,20 @@ public class DebianMetricsService {
     @Value("${debian.server.ip:192.168.100.10}")
     private String debianIp;
 
-    private volatile Map<String, Object> latestData = null;
-    private final Object collectionLock = new Object();
+    private volatile Map<String, Object> latestValidData = null;
+    private volatile boolean isStale = false;
+    private final Object lock = new Object();
 
-    // Executa em background a cada 4 segundos, sem travar threads HTTP do Tomcat
     @Scheduled(fixedDelay = 4000, initialDelay = 1000)
     public void coletarMetricasPeriodicas() {
         executarColeta();
     }
 
     public Map<String, Object> getMetricsData() {
-        if (latestData == null) {
+        if (latestValidData == null) {
             executarColeta();
         }
-        return latestData != null ? latestData : getFallbackData();
+        return latestValidData != null ? latestValidData : getFallbackData();
     }
 
     public Map<String, Object> forcarAtualizacao() {
@@ -43,7 +43,7 @@ public class DebianMetricsService {
     }
 
     private void executarColeta() {
-        synchronized (collectionLock) {
+        synchronized (lock) {
             Map<String, Object> data = new HashMap<>();
             Map<String, String> services = new HashMap<>();
             boolean sshOk = false;
@@ -54,6 +54,7 @@ public class DebianMetricsService {
 
                 if (!isError) {
                     sshOk = true;
+                    isStale = false;
                     data.put("cpu", sshMetrics.getOrDefault("cpu", "0%"));
                     data.put("ram", sshMetrics.getOrDefault("ram", "0%"));
                     data.put("ramDetails", sshMetrics.getOrDefault("ramDetails", ""));
@@ -67,35 +68,48 @@ public class DebianMetricsService {
                     services.put("dovecot", sshMetrics.getOrDefault("svc_dovecot", "unknown"));
                     services.put("ssh", sshMetrics.getOrDefault("svc_ssh", "unknown"));
                 } else {
+                    // Falha temporária: se já temos dados anteriores válidos, PRESERVA os números para não quebrar a tela
+                    if (latestValidData != null) {
+                        data.putAll(latestValidData);
+                        sshOk = false;
+                        isStale = true;
+                    } else {
+                        data.put("cpu", "Sem SSH");
+                        data.put("ram", "Sem SSH");
+                        data.put("disk", "Sem SSH");
+                        data.put("uptime", "Sem SSH");
+                        data.put("hostname", "debian-servidor");
+                        services.put("apache2", "unknown");
+                        services.put("vsftpd", "unknown");
+                        services.put("postfix", "unknown");
+                        services.put("dovecot", "unknown");
+                        services.put("ssh", "unknown");
+                    }
+                }
+            } catch (Exception e) {
+                if (latestValidData != null) {
+                    data.putAll(latestValidData);
+                    sshOk = false;
+                    isStale = true;
+                } else {
                     data.put("cpu", "Sem SSH");
                     data.put("ram", "Sem SSH");
                     data.put("disk", "Sem SSH");
                     data.put("uptime", "Sem SSH");
-                    data.put("hostname", "Debian");
-                    data.put("sshError", sshMetrics.getOrDefault("sshError", ""));
-
+                    data.put("hostname", "debian-servidor");
                     services.put("apache2", "unknown");
                     services.put("vsftpd", "unknown");
                     services.put("postfix", "unknown");
                     services.put("dovecot", "unknown");
                     services.put("ssh", "unknown");
                 }
-            } catch (Exception e) {
-                data.put("cpu", "Sem SSH");
-                data.put("ram", "Sem SSH");
-                data.put("disk", "Sem SSH");
-                data.put("uptime", "Sem SSH");
-                data.put("hostname", "Debian");
-
-                services.put("apache2", "unknown");
-                services.put("vsftpd", "unknown");
-                services.put("postfix", "unknown");
-                services.put("dovecot", "unknown");
-                services.put("ssh", "unknown");
             }
 
             data.put("sshOk", sshOk);
-            data.put("services", services);
+            data.put("desatualizado", isStale);
+            if (!services.isEmpty()) {
+                data.put("services", services);
+            }
 
             // Teste rápido de latência e código HTTP para o Apache (timeout de 2s)
             int httpStatus = 0;
@@ -119,7 +133,7 @@ public class DebianMetricsService {
             data.put("httpStatus", httpStatus);
             data.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
 
-            latestData = data;
+            latestValidData = data;
         }
     }
 
@@ -132,6 +146,7 @@ public class DebianMetricsService {
         data.put("uptime", "...");
         data.put("hostname", "debian-servidor");
         data.put("sshOk", false);
+        data.put("desatualizado", false);
         Map<String, String> services = new HashMap<>();
         services.put("apache2", "unknown");
         services.put("vsftpd", "unknown");

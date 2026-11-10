@@ -6,10 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="f8bbb83a-3d6c-4864-affa-6731a65b4f9e" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/console/app/AppApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/console/app/AppApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/console/app/controllers/MonitorApiController.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/console/app/controllers/MonitorApiController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/DebianMetricsService.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/DebianMetricsService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/resources/templates/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/resources/templates/dashboard.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -133,7 +129,7 @@
       <workItem from="1794226857671" duration="1488000" />
       <workItem from="1794228624214" duration="1027000" />
       <workItem from="1794240832746" duration="3469000" />
-      <workItem from="1794310390872" duration="10040000" />
+      <workItem from="1794310390872" duration="11602000" />
     </task>
     <servers />
   </component>
