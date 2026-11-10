@@ -186,13 +186,16 @@
             }
         });
 
-        // Polling a cada 5 segundos conforme especificação do trabalho
-        setInterval(buscarMetricasEAtualizar, 5000);
+        // Polling sequencial seguro (espera a requisição terminar antes de agendar a próxima)
         buscarMetricasEAtualizar();
     });
 
+    let isFetching = false;
+    let pollTimer = null;
+
     function atualizarDadosManualmente() {
-        buscarMetricasEAtualizar();
+        if (pollTimer) clearTimeout(pollTimer);
+        buscarMetricasEAtualizar(true);
     }
 
     function atualizarBadgeServico(elementId, state) {
@@ -213,8 +216,13 @@
         }
     }
 
-    function buscarMetricasEAtualizar() {
-        fetch('/api/monitor')
+    function buscarMetricasEAtualizar(forcar = false) {
+        if (isFetching && !forcar) return;
+        isFetching = true;
+
+        const url = forcar ? '/api/monitor?force=true' : '/api/monitor';
+
+        fetch(url)
             .then(response => {
                 if (!response.ok) throw new Error("Falha na comunicação");
                 return response.json();
@@ -292,6 +300,11 @@
                 document.getElementById('ssh-alerta').classList.remove('d-none');
                 const agora = new Date().toLocaleTimeString();
                 document.getElementById('last-update').innerHTML = `<i class="bi bi-exclamation-triangle me-1 text-warning"></i> Desatualizado desde: ${agora}`;
+            })
+            .finally(() => {
+                isFetching = false;
+                // Agenda a próxima execução apenas após a conclusão da atual
+                pollTimer = setTimeout(buscarMetricasEAtualizar, 4000);
             });
     }
 </script>
