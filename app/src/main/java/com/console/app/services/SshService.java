@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class SshService {
@@ -20,7 +22,8 @@ public class SshService {
     @Value("${debian.server.ssh.user:vboxuser}")
     private String user;
 
-    @Value("${debian.server.ssh.password:sua_senha}")
+    // 1. ALTERADO: Defina a senha real do Debian no fallback (ex: 123456)
+    @Value("${debian.server.ssh.password:123456}")
     private String password;
 
     // Obter o hostname estático atual do Debian
@@ -30,17 +33,43 @@ public class SshService {
 
     // Alterar o hostname temporariamente
     public String setHostname(String newHostname) {
-        // Validação simples para evitar injeção de comandos
         if (newHostname == null || !newHostname.matches("^[a-zA-Z0-9-]+$")) {
             return "Erro: Nome de hostname inválido.";
         }
-        // Utilizando sudo para alterar o hostname conforme exigido no laboratório
         String command = "sudo hostnamectl set-hostname " + newHostname;
         return executeCommand(command);
     }
 
+    // 2. NOVOS MÉTODOS: Coleta tratada de métricas do sistema Debian
+    public Map<String, String> getMetrics() {
+        Map<String, String> metrics = new HashMap<>();
+
+        // Leitura de CPU (%)
+        String cpu = executeCommand("top -bn1 | grep 'Cpu(s)' | awk '{print 100 - $8\"%\"}'");
+        metrics.put("cpuUsage", (cpu.isEmpty() || cpu.startsWith("Erro")) ? "0%" : cpu);
+        metrics.put("cpu", metrics.get("cpuUsage"));
+
+        // Leitura de RAM (%)
+        String ram = executeCommand("free | awk '/Mem:/ {printf(\"%.0f%%\", $3/$2*100)}'");
+        metrics.put("memoryUsage", (ram.isEmpty() || ram.startsWith("Erro")) ? "0%" : ram);
+        metrics.put("ram", metrics.get("memoryUsage"));
+
+        // Leitura de Disco (/srv ou raiz /)
+        String disk = executeCommand("df -h /srv 2>/dev/null | awk 'NR==2 {print $3 \" / \" $2}'");
+        if (disk.isEmpty() || disk.startsWith("Erro")) {
+            disk = executeCommand("df -h / | awk 'NR==2 {print $3 \" / \" $2}'");
+        }
+        metrics.put("diskUsage", disk.isEmpty() ? "Erro" : disk);
+
+        // Leitura de Uptime
+        String uptime = executeCommand("uptime -p | sed 's/up //'");
+        metrics.put("uptime", uptime.isEmpty() ? "Erro" : uptime);
+
+        return metrics;
+    }
+
     // Método auxiliar genérico para executar comandos via JSch
-    private String executeCommand(String command) {
+    public String executeCommand(String command) {
         StringBuilder output = new StringBuilder();
         try {
             JSch jsch = new JSch();
