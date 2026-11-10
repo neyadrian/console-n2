@@ -1,62 +1,45 @@
 <!DOCTYPE html>
-<html lang="pt-PT" data-bs-theme="dark" xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" data-bs-theme="dark" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Console N2</title>
-    <!-- Bootstrap 5 CSS via CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/console.css}">
     <style>
-        body {
-            display: flex;
-            align-items: center;
-            padding-top: 40px;
-            padding-bottom: 40px;
-            background-color: #121212;
-            height: 100vh;
-        }
+        body { display: flex; align-items: center; justify-content: center; height: 100vh; }
         .form-signin {
             max-width: 400px;
-            padding: 15px;
-            margin: auto;
+            width: 100%;
+            padding: 28px;
             background-color: #1e1e1e;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 1px solid #333;
+            border-radius: 12px;
         }
-        .ifce-brand {
-            color: #28a745;
-            font-weight: bold;
-        }
+        .brand { color: #22c55e; font-weight: 700; }
+        .form-control { height: 48px; }
+        .hint { color: #c8c8c8; font-size: 0.85rem; }
     </style>
 </head>
 <body>
-<main class="form-signin text-center w-100">
+<main class="form-signin text-center">
     <form th:action="@{/login}" method="post">
-        <h2 class="h3 mb-3 fw-normal">
-            <span class="ifce-brand">IFCE</span> Console N2
-        </h2>
+        <h2 class="h3 mb-1 fw-normal"><span class="brand">Ney Adrian</span></h2>
+        <p class="hint mb-4">Console N2 · Redes de Computadores II</p>
 
-        <!-- Mensagem de Erro (Aparece se falhar o login) -->
-        <div th:if="${param.error}" class="alert alert-danger" role="alert">
-            Utilizador ou senha inválidos.
-        </div>
+        <div th:if="${param.error}" class="alert alert-danger" role="alert">Utilizador ou senha inválidos.</div>
+        <div th:if="${param.logout}" class="alert alert-success" role="alert">Sessão terminada com sucesso.</div>
 
-        <!-- Mensagem de Logout -->
-        <div th:if="${param.logout}" class="alert alert-success" role="alert">
-            Sessão terminada com sucesso.
-        </div>
-
-        <div class="form-floating mb-3">
+        <div class="text-start mb-3">
+            <label class="form-label" for="username">Nome de utilizador</label>
             <input type="text" class="form-control" id="username" name="username" placeholder="admin" required>
-            <label for="username">Nome de Utilizador</label>
         </div>
-        <div class="form-floating mb-3">
+        <div class="text-start mb-4">
+            <label class="form-label" for="password">Senha</label>
             <input type="password" class="form-control" id="password" name="password" placeholder="Senha" required>
-            <label for="password">Senha</label>
         </div>
-
         <button class="w-100 btn btn-lg btn-success" type="submit">Entrar</button>
-        <p class="mt-5 mb-3 text-muted">Redes de Computadores II &copy; 2026</p>
+        <p class="mt-4 mb-0 hint">admin / operador / leitor · senha 123</p>
     </form>
 </main>
 </body>

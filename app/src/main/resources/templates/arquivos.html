@@ -5,82 +5,133 @@
     <title>Gerenciamento de Arquivos - Console N2</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        body { background-color: #121212; color: #e0e0e0; display: flex; min-height: 100vh; margin: 0; font-family: system-ui, -apple-system, sans-serif; }
-        .sidebar { width: 250px; background-color: #181818; border-right: 1px solid #282828; padding: 24px 16px; display: flex; flex-direction: column; flex-shrink: 0; min-height: 100vh; }
-        .sidebar-brand { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #282828; text-align: center; }
-        .sidebar-brand h5 { color: #22c55e; font-size: 1.25rem; font-weight: 700; margin: 0 0 4px 0; }
-        .sidebar-brand small { color: #888888; font-size: 0.85rem; }
-        .nav-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-        .nav-item-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: #a0a0a0; text-decoration: none; border-radius: 8px; font-size: 0.95rem; transition: all 0.15s ease-in-out; }
-        .nav-item-link:hover { background-color: #222222; color: #ffffff; }
-        .nav-item-link.active { background-color: #2a2a2a; color: #ffffff; font-weight: 500; }
-        .main-wrapper { flex-grow: 1; padding: 36px 40px; overflow-y: auto; background-color: #121212; }
-        .content-card { background-color: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/console.css}">
 </head>
 <body>
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <h5>IFCE Console</h5>
-        <small>N2 - Redes II</small>
-    </div>
-    <div class="mb-3 px-2 text-center">
-        <small class="text-muted d-block">Usuário logado</small>
-        <span class="badge bg-secondary" sec:authentication="name">user</span>
-    </div>
-    <ul class="nav-list">
-        <li><a th:href="@{/dashboard}" class="nav-item-link"><i class="bi bi-house"></i> Visão Geral</a></li>
-        <li><a th:href="@{/arquivos}" class="nav-item-link active"><i class="bi bi-folder"></i> Arquivos (FTP)</a></li>
-        <li><a th:href="@{/email}" class="nav-item-link"><i class="bi bi-envelope"></i> E-mail</a></li>
-        <li><a th:href="@{/ssh}" class="nav-item-link"><i class="bi bi-terminal"></i> Acesso SSH</a></li>
-        <li><a th:href="@{/logs}" class="nav-item-link"><i class="bi bi-journal-text"></i> Logs Técnicos</a></li>
-    </ul>
-    <div class="mt-auto pt-3 border-top border-secondary">
-        <form th:action="@{/logout}" method="post">
-            <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-box-arrow-right"></i> Sair</button>
-        </form>
-    </div>
-</div>
+<div th:replace="~{fragments/chrome :: sidebar('arquivos')}"></div>
 
 <div class="main-wrapper">
-    <h2 class="mb-4 text-white"><i class="bi bi-folder2-open me-2"></i> Arquivos e Publicação FTP</h2>
+    <div th:replace="~{fragments/chrome :: userbar}"></div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-white mb-1"><i class="bi bi-folder2-open me-2"></i> Arquivos e Publicação FTP (vsftpd)</h2>
+            <small class="text-muted"><i class="bi bi-hdd-network me-1"></i> Servidor: Debian 192.168.100.10:21 | Publicação: /srv/portal/arquivos</small>
+        </div>
+    </div>
 
-    <div th:if="${message}" class="alert alert-success alert-dismissible fade show" role="alert">
-        <span th:text="${message}">Sucesso</span>
+    <div class="alert alert-warning" sec:authorize="hasRole('LEITOR')">
+        <i class="bi bi-exclamation-triangle me-2"></i> Aviso: o perfil <strong>LEITOR</strong> pode consultar e baixar arquivos, mas o envio será recusado pelo backend.
+    </div>
+
+    <!-- Alertas de sucesso / erro simples -->
+    <div th:if="${message and uploadResult == null}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i><span th:text="${message}">Sucesso</span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
-        <span th:text="${error}">Erro</span>
+        <i class="bi bi-x-circle me-2"></i><span th:text="${error}">Erro</span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
-    <div class="alert alert-secondary" sec:authorize="hasRole('LEITOR')">
-        Perfil LEITOR: apenas visualização. Upload FTP está bloqueado.
+    <!-- Painel de Detalhes da Transferência e Verificação de Integridade SHA-256 (Requisito 2.3) -->
+    <div th:if="${uploadResult != null}" class="content-card mb-4 border border-success">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-success mb-0"><i class="bi bi-shield-check me-2"></i> Transferência e Integridade SHA-256</h5>
+            <span th:if="${uploadResult.integrityMatch}" class="badge bg-success fs-6"><i class="bi bi-check2-all me-1"></i> Integridade Confirmada (100%)</span>
+            <span th:unless="${uploadResult.integrityMatch}" class="badge bg-warning text-dark fs-6">Atenção ao Hash</span>
+        </div>
+        
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="p-3 bg-dark rounded border border-secondary">
+                    <small class="text-muted d-block">Arquivo Enviado</small>
+                    <strong class="text-white fs-5" th:text="${uploadResult.filename}">relatorio.pdf</strong>
+                    <div class="text-info mt-1" th:text="'Tamanho: ' + ${uploadResult.formattedSize}">Tamanho: 24.5 KB</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="p-3 bg-dark rounded border border-secondary">
+                    <small class="text-muted d-block">Destino no Servidor Debian</small>
+                    <strong class="text-light">ftp://192.168.100.10/arquivos/</strong>
+                    <div class="text-secondary mt-1">Publicação web: http://192.168.100.10/arquivos/</div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="p-3 bg-dark rounded border border-secondary font-monospace" style="font-size:0.85rem;">
+                    <div class="mb-2">
+                        <span class="text-secondary">SHA-256 (Arquivo Enviado):</span><br>
+                        <span class="text-warning text-break" th:text="${uploadResult.sha256Original}">--</span>
+                    </div>
+                    <div>
+                        <span class="text-secondary">SHA-256 (Arquivo Recuperado no Servidor):</span><br>
+                        <span class="text-success text-break" th:text="${uploadResult.sha256Retrieved}">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="content-card" sec:authorize="hasAnyRole('ADMINISTRADOR','OPERADOR')">
-        <h5 class="text-white mb-3">Enviar Ficheiro via FTP (vsftpd)</h5>
+
+    <!-- Formulário de Upload FTP -->
+    <div class="content-card mb-4">
+        <h5 class="text-white mb-3"><i class="bi bi-cloud-arrow-up me-2"></i> Enviar Ficheiro via FTP (vsftpd)</h5>
         <form th:action="@{/arquivos/upload}" method="post" enctype="multipart/form-data">
             <div class="mb-3">
-                <input type="file" class="form-control bg-dark text-white border-secondary" name="file" required>
+                <label class="form-label text-muted">Selecione o arquivo para transferência FTP</label>
+                <input type="file" class="form-control" name="file" required>
             </div>
-            <button type="submit" class="btn btn-success"><i class="bi bi-cloud-upload me-1"></i> Enviar ao Servidor</button>
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-cloud-upload me-1"></i> Transferir via FTP ao Debian
+            </button>
         </form>
     </div>
 
+    <!-- Listagem dos Arquivos Publicados com Download pelo Console e Link Apache -->
     <div class="content-card">
-        <h5 class="text-white mb-3">Ficheiros Publicados no Servidor (/srv/portal/arquivos)</h5>
-        <ul class="list-group list-group-flush bg-transparent">
-            <li th:each="arq : ${arquivos}" class="list-group-item bg-dark text-white border-secondary d-flex justify-content-between align-items-center">
-                <span th:text="${arq}"><i class="bi bi-file-earmark me-2"></i> ficheiro.pdf</span>
-                <a th:href="@{'http://192.168.100.10/arquivos/' + ${arq}}" target="_blank" class="btn btn-sm btn-outline-info">
-                    <i class="bi bi-globe me-1"></i> Ver no Apache
-                </a>
-            </li>
-            <li th:if="${#lists.isEmpty(arquivos)}" class="list-group-item bg-dark text-muted border-secondary">
-                Nenhum ficheiro encontrado no diretório remoto.
-            </li>
-        </ul>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-white mb-0"><i class="bi bi-files me-2"></i> Ficheiros Remotos (/srv/portal/arquivos)</h5>
+            <a th:href="@{/arquivos}" class="btn btn-sm btn-outline-secondary text-light">
+                <i class="bi bi-arrow-clockwise me-1"></i> Atualizar Lista
+            </a>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                <tr>
+                    <th>Nome do Ficheiro</th>
+                    <th>Tamanho</th>
+                    <th class="text-end">Ações Disponíveis</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="arq : ${arquivos}">
+                    <td>
+                        <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                        <span class="fw-semibold text-white" th:text="${arq.name}">documento.pdf</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-dark border border-secondary text-info" th:text="${arq.formattedSize}">--</span>
+                    </td>
+                    <td class="text-end">
+                        <!-- Requisito 2.3 item 2: Download pelo console -->
+                        <a th:href="@{'/arquivos/download/' + ${arq.name}}" class="btn btn-sm btn-outline-success me-2">
+                            <i class="bi bi-download me-1"></i> Baixar pelo Console
+                        </a>
+                        <!-- Requisito 2.3 item 4: Localizar na publicação HTTP já existente sem cópia manual -->
+                        <a th:href="@{'http://192.168.100.10/arquivos/' + ${arq.name}}" target="_blank" class="btn btn-sm btn-outline-info">
+                            <i class="bi bi-globe me-1"></i> Ver no Apache
+                        </a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(arquivos)}">
+                    <td colspan="3" class="text-center py-4 text-muted">
+                        <i class="bi bi-folder-x fs-3 d-block mb-2"></i>
+                        Nenhum ficheiro encontrado no diretório remoto do servidor.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

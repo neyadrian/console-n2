@@ -1,9 +1,8 @@
 package com.console.app.controllers;
 
-import com.console.app.services.DebianMetricsService;
+import com.console.app.security.RoleCheck;
 import com.console.app.services.EmailService;
-import com.console.app.services.FtpService;
-import com.console.app.services.SshIntegrationService;
+import com.console.app.services.SshService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -11,24 +10,15 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @Controller
 public class WebController {
 
     @Autowired
-    private SshIntegrationService sshService;
-
-    @Autowired
-    private DebianMetricsService metricsService;
+    private SshService sshService;
 
     @Autowired
     private EmailService emailService;
-
-    @Autowired
-    private FtpService ftpService;
 
     @GetMapping("/login")
     public String login() {
@@ -36,61 +26,48 @@ public class WebController {
     }
 
     @GetMapping({"", "/", "/dashboard"})
-    public String dashboard(Model model, Authentication authentication) {
-        model.addAttribute("metricas", metricsService.getMetrics());
-        if (authentication != null) {
-            model.addAttribute("usuarioLogado", authentication.getName());
-            model.addAttribute("perfilLogado", authentication.getAuthorities().stream()
-                    .findFirst()
-                    .map(a -> a.getAuthority().replace("ROLE_", ""))
-                    .orElse("LEITOR"));
-        }
+    public String dashboard(Model model) {
         return "dashboard";
     }
 
     @GetMapping("/logs")
-    public String viewLogs(Model model) {
-        String logsDebian = sshService.executeCommand("journalctl -n 50 --no-pager");
+    public String viewLogs(@RequestParam(value = "service", required = false, defaultValue = "geral") String service,
+                           @RequestParam(value = "lines", required = false, defaultValue = "50") int lines,
+                           Model model) {
+        // Limita a quantidade de linhas para segurança
+        int safeLines = Math.min(Math.max(lines, 10), 200);
+
+        String command;
+        switch (service.toLowerCase()) {
+            case "apache2":
+            case "apache":
+                command = "journalctl -u apache2 -n " + safeLines + " --no-pager 2>/dev/null || tail -n " + safeLines + " /var/log/apache2/access.log 2>/dev/null";
+                break;
+            case "vsftpd":
+            case "ftp":
+                command = "journalctl -u vsftpd -n " + safeLines + " --no-pager 2>/dev/null || tail -n " + safeLines + " /var/log/vsftpd.log 2>/dev/null";
+                break;
+            case "postfix":
+            case "smtp":
+                command = "journalctl -u postfix -n " + safeLines + " --no-pager 2>/dev/null || tail -n " + safeLines + " /var/log/mail.log 2>/dev/null";
+                break;
+            case "dovecot":
+            case "imap":
+                command = "journalctl -u dovecot -n " + safeLines + " --no-pager 2>/dev/null || tail -n " + safeLines + " /var/log/mail.log 2>/dev/null";
+                break;
+            case "ssh":
+                command = "journalctl -u ssh -n " + safeLines + " --no-pager";
+                break;
+            default:
+                service = "geral";
+                command = "journalctl -n " + safeLines + " --no-pager";
+                break;
+        }
+
+        String logsDebian = sshService.executeCommand(command);
         model.addAttribute("logs", logsDebian);
+        model.addAttribute("selectedService", service);
+        model.addAttribute("selectedLines", safeLines);
         return "logs";
-    }
-
-    @GetMapping("/arquivos")
-    public String arquivosPage(Model model) {
-        List<String> arquivos = ftpService.listFiles();
-        model.addAttribute("arquivos", arquivos);
-        return "arquivos";
-    }
-
-    @PostMapping("/arquivos/upload")
-    public String uploadArquivo(@RequestParam("file") MultipartFile file, Model model) {
-        boolean success = ftpService.uploadFile(file);
-        if (success) {
-            model.addAttribute("message", "Arquivo enviado com sucesso para o vsftpd!");
-        } else {
-            model.addAttribute("error", "Falha ao enviar o arquivo via FTP.");
-        }
-        model.addAttribute("arquivos", ftpService.listFiles());
-        return "arquivos";
-    }
-
-    @GetMapping("/email")
-    public String paginaEmail() {
-        return "email";
-    }
-
-    @PostMapping("/enviar-email")
-    public String enviarEmail(
-            @RequestParam("destinatario") String destinatario,
-            @RequestParam("assunto") String assunto,
-            @RequestParam("mensagem") String mensagem,
-            Model model) {
-        try {
-            emailService.enviarEmail(destinatario, assunto, mensagem);
-            model.addAttribute("sucesso", "E-mail enviado com sucesso para " + destinatario);
-        } catch (Exception e) {
-            model.addAttribute("erro", "Falha ao enviar e-mail: " + e.getMessage());
-        }
-        return "email";
     }
 }

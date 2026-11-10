@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<div th:fragment="sidebar(active)" class="sidebar">
+    <div class="sidebar-brand">
+        <h5>Ney Adrian</h5>
+        <small>Console N2 - Redes II</small>
+    </div>
+    <ul class="nav-list">
+        <li><a th:href="@{/dashboard}" th:classappend="${active == 'dashboard'} ? ' active'" class="nav-item-link"><i class="bi bi-house"></i> Visão Geral</a></li>
+        <li><a th:href="@{/arquivos}" th:classappend="${active == 'arquivos'} ? ' active'" class="nav-item-link"><i class="bi bi-folder"></i> Arquivos (FTP)</a></li>
+        <li><a th:href="@{/email}" th:classappend="${active == 'email'} ? ' active'" class="nav-item-link"><i class="bi bi-envelope"></i> E-mail</a></li>
+        <li><a th:href="@{/ssh}" th:classappend="${active == 'ssh'} ? ' active'" class="nav-item-link"><i class="bi bi-terminal"></i> Acesso SSH</a></li>
+        <li><a th:href="@{/logs}" th:classappend="${active == 'logs'} ? ' active'" class="nav-item-link"><i class="bi bi-journal-text"></i> Logs Técnicos</a></li>
+    </ul>
+    <div class="mt-auto pt-3 border-top border-secondary">
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-box-arrow-right"></i> Sair</button>
+        </form>
+    </div>
+</div>
+
+<div th:fragment="userbar" class="top-navbar">
+    <div class="user-chip">
+        <i class="bi bi-person-circle fs-3 text-success"></i>
+        <div>
+            <div class="user-name" th:text="${usuarioLogado} ?: ${#authentication.name}">admin</div>
+            <span class="badge bg-success" th:text="${perfilLogado}">ADMINISTRADOR</span>
+        </div>
+    </div>
+</div>
+</body>
+</html>

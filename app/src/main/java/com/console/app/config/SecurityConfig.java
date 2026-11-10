@@ -2,7 +2,6 @@ package com.console.app.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -21,10 +20,6 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/login", "/css/**", "/js/**", "/img/**").permitAll()
-                        .requestMatchers("/logout").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/ssh/**").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/arquivos/**", "/ftp/**", "/enviar-email").hasAnyRole("ADMINISTRADOR", "OPERADOR")
-                        .requestMatchers(HttpMethod.POST).hasAnyRole("ADMINISTRADOR", "OPERADOR")
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
@@ -35,8 +30,7 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")
                         .permitAll()
-                )
-                .exceptionHandling(ex -> ex.accessDeniedPage("/dashboard?denied"));
+                );
 
         return http.build();
     }

@@ -5,89 +5,65 @@
     <title>Visão Geral - Console N2</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <style>
-        body { background-color: #121212; color: #e0e0e0; display: flex; min-height: 100vh; margin: 0; font-family: system-ui, -apple-system, sans-serif; }
-        .sidebar { width: 250px; background-color: #181818; border-right: 1px solid #282828; padding: 24px 16px; display: flex; flex-direction: column; flex-shrink: 0; }
-        .sidebar-brand { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #282828; text-align: center; }
-        .sidebar-brand h5 { color: #22c55e; font-size: 1.25rem; font-weight: 700; margin: 0 0 4px 0; }
-        .sidebar-brand small { color: #888888; font-size: 0.85rem; }
-        .user-box { background: #222; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 16px; text-align: center; }
-        .nav-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-        .nav-item-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: #a0a0a0; text-decoration: none; border-radius: 8px; font-size: 0.95rem; transition: all 0.15s ease-in-out; }
-        .nav-item-link:hover { background-color: #222222; color: #ffffff; }
-        .nav-item-link.active { background-color: #2a2a2a; color: #ffffff; font-weight: 500; }
-        .main-wrapper { flex-grow: 1; padding: 36px 40px; overflow-y: auto; background-color: #121212; }
-        .page-header-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
-        .page-header-title h2 { font-size: 1.75rem; font-weight: 600; color: #ffffff; margin: 0; display: flex; align-items: center; gap: 12px; }
-        .content-card { background-color: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
-        .metric-box { background-color: #181818; border: 1px solid #2a2a2a; border-radius: 8px; padding: 20px; text-align: center; }
-        .metric-title { color: #888888; font-size: 0.9rem; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .metric-value { font-size: 1.8rem; font-weight: 700; color: #22c55e; margin: 0; }
-        .custom-table { width: 100%; border-collapse: collapse; color: #d0d0d0; }
-        .custom-table th { color: #888888; font-weight: 500; border-bottom: 1px solid #2e2e2e; padding: 12px 16px; text-align: left; }
-        .custom-table td { padding: 16px; border-bottom: 1px solid #262626; vertical-align: middle; }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/console.css}">
 </head>
 <body>
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <h5>IFCE Console</h5>
-        <small>N2 - Redes II</small>
-    </div>
-    <div class="user-box">
-        <small class="text-muted d-block mb-1">Usuário logado</small>
-        <div class="fw-semibold text-white" th:text="${usuarioLogado} ?: ${#authentication.name}">admin</div>
-        <span class="badge bg-success mt-1" th:text="${perfilLogado} ?: 'LEITOR'">ADMINISTRADOR</span>
-        <div class="small text-muted mt-1" sec:authorize="hasRole('LEITOR')">Somente leitura</div>
-    </div>
-    <ul class="nav-list">
-        <li><a th:href="@{/dashboard}" class="nav-item-link active"><i class="bi bi-house"></i> Visão Geral</a></li>
-        <li><a th:href="@{/arquivos}" class="nav-item-link"><i class="bi bi-folder"></i> Arquivos (FTP)</a></li>
-        <li><a th:href="@{/email}" class="nav-item-link"><i class="bi bi-envelope"></i> E-mail</a></li>
-        <li><a th:href="@{/ssh}" class="nav-item-link"><i class="bi bi-terminal"></i> Acesso SSH</a></li>
-        <li><a th:href="@{/logs}" class="nav-item-link"><i class="bi bi-journal-text"></i> Logs Técnicos</a></li>
-    </ul>
-    <div class="mt-auto pt-3 border-top border-secondary">
-        <form th:action="@{/logout}" method="post">
-            <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-box-arrow-right"></i> Sair</button>
-        </form>
-    </div>
-</div>
+<div th:replace="~{fragments/chrome :: sidebar('dashboard')}"></div>
 
 <div class="main-wrapper">
-    <div class="page-header-title">
+    <div th:replace="~{fragments/chrome :: userbar}"></div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
-            <h2><i class="bi bi-speedometer2"></i> Visão Geral do Servidor</h2>
-            <small class="text-muted mt-2 d-block" id="last-update"><i class="bi bi-clock-history me-1"></i> Atualizado em: --:--:--</small>
+            <h2 class="mb-1"><i class="bi bi-speedometer2 me-2"></i> Visão Geral do Servidor</h2>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-dark border border-secondary text-info">
+                    <i class="bi bi-hdd-network me-1"></i> Debian 13 (192.168.100.10)
+                </span>
+                <span class="badge bg-dark border border-secondary text-light">
+                    Hostname: <strong id="srv-hostname">debian</strong>
+                </span>
+                <small class="text-muted" id="last-update"><i class="bi bi-clock-history me-1"></i> Atualizado em: --:--:--</small>
+            </div>
         </div>
         <button class="btn btn-outline-secondary btn-sm text-light border-secondary" onclick="atualizarDadosManualmente();">
-            <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+            <i class="bi bi-arrow-clockwise me-1"></i> Atualizar Agora
         </button>
+    </div>
+
+    <!-- Banner de Alerta de Perda de Conexão -->
+    <div id="ssh-alerta" class="alert alert-danger py-2 mb-3 d-none">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Perda de comunicação SSH:</strong> Não foi possível obter métricas em tempo real do Debian. Os dados exibidos abaixo podem estar desatualizados.
     </div>
 
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="metric-box">
                 <div class="metric-title"><i class="bi bi-cpu"></i> CPU</div>
-                <div class="metric-value" id="val-cpu" th:text="${metricas != null ? (metricas['cpu'] ?: '0%') : '0%'}">0%</div>
+                <div class="metric-value text-success" id="val-cpu">...</div>
+                <small class="text-muted" style="font-size:0.75rem;">Uso instantâneo</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="metric-box">
                 <div class="metric-title"><i class="bi bi-memory"></i> Memória RAM</div>
-                <div class="metric-value text-info" id="val-ram" th:text="${metricas != null ? (metricas['memoria'] ?: '0') : '0'}">0</div>
+                <div class="metric-value text-info" id="val-ram">...</div>
+                <small class="text-muted" id="val-ram-detalhes" style="font-size:0.75rem;">-- MB / -- MB</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="metric-box">
-                <div class="metric-title"><i class="bi bi-hdd"></i> Disco</div>
-                <div class="metric-value text-warning" id="val-disk" th:text="${metricas != null ? (metricas['disco'] ?: '0') : '0'}">0</div>
+                <div class="metric-title"><i class="bi bi-hdd"></i> Disco (/srv/portal/arquivos)</div>
+                <div class="metric-value text-warning" id="val-disk">...</div>
+                <small class="text-muted" style="font-size:0.75rem;">Usado / Total</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="metric-box">
-                <div class="metric-title"><i class="bi bi-clock"></i> Tempo Ativo</div>
-                <div class="metric-value text-light" id="val-uptime" th:text="${metricas != null ? (metricas['uptime'] ?: '0h') : '0h'}">0h</div>
+                <div class="metric-title"><i class="bi bi-clock"></i> Tempo Ativo (Uptime)</div>
+                <div class="metric-value text-light" id="val-uptime">...</div>
+                <small class="text-muted" style="font-size:0.75rem;">uptime -p</small>
             </div>
         </div>
     </div>
@@ -105,9 +81,11 @@
             <div class="content-card h-100 mb-0">
                 <h6 class="text-white mb-3"><i class="bi bi-globe me-2"></i> Latência HTTP (Apache)</h6>
                 <h2 class="display-5 text-primary mb-2 fw-bold" id="http-latency">-- ms</h2>
-                <div class="text-muted mb-2">Código HTTP: <span id="http-status" class="badge bg-secondary">--</span></div>
-                <small class="text-muted"><i class="bi bi-hdd-network me-1"></i> 192.168.100.10</small>
-                <div id="http-alerta" class="alert alert-danger p-2 mt-3 d-none" style="font-size: 0.85rem;">Falha na comunicação com o servidor HTTP.</div>
+                <div class="mb-2" style="color:#c8c8c8;">Código HTTP: <span id="http-status" class="badge bg-secondary">--</span></div>
+                <small style="color:#c8c8c8;"><i class="bi bi-hdd-network me-1"></i> Destino: http://192.168.100.10</small>
+                <div id="http-alerta" class="alert alert-danger p-2 mt-3 d-none" style="font-size: 0.85rem;">
+                    Falha na comunicação com o servidor HTTP Apache.
+                </div>
                 <div style="height: 140px; width: 100%; margin-top: 16px;">
                     <canvas id="latenciaChart"></canvas>
                 </div>
@@ -115,17 +93,52 @@
         </div>
     </div>
 
+    <!-- Tabela com Estado REAL dos 5 Serviços Integrados (N2) -->
     <div class="content-card">
-        <h5 class="text-white mb-4"><i class="bi bi-server me-2"></i> Estado dos Serviços Integrados</h5>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-white mb-0"><i class="bi bi-server me-2"></i> Estado dos Serviços Integrados (Debian)</h5>
+            <small class="text-muted"><i class="bi bi-shield-check me-1"></i> Coletado via systemctl no Debian</small>
+        </div>
         <table class="custom-table">
             <thead>
-            <tr><th>Serviço</th><th>Estado</th><th class="text-end">Ação</th></tr>
+            <tr>
+                <th>Serviço</th>
+                <th>Porta / Protocolo</th>
+                <th>Estado Real</th>
+                <th class="text-end">Ação Rápida</th>
+            </tr>
             </thead>
             <tbody>
-            <tr><td>Apache (HTTP)</td><td><span class="badge bg-success">Ativo</span></td><td class="text-end"><a href="http://192.168.100.10" target="_blank" class="btn btn-sm btn-outline-primary">Acessar</a></td></tr>
-            <tr><td>vsftpd (FTP)</td><td><span class="badge bg-success">Ativo</span></td><td class="text-end"><a th:href="@{/arquivos}" class="btn btn-sm btn-outline-primary">Gerenciar</a></td></tr>
-            <tr><td>Postfix / Dovecot</td><td><span class="badge bg-success">Ativo</span></td><td class="text-end"><a th:href="@{/email}" class="btn btn-sm btn-outline-primary">Abrir E-mail</a></td></tr>
-            <tr><td>OpenSSH</td><td><span class="badge bg-success">Ativo</span></td><td class="text-end"><a th:href="@{/ssh}" class="btn btn-sm btn-outline-primary">Configurar</a></td></tr>
+            <tr>
+                <td><strong>Apache</strong> (Servidor Web)</td>
+                <td><span class="badge bg-dark border border-secondary text-light">80 / HTTP</span></td>
+                <td><span id="status-apache2" class="badge bg-secondary">Consultando...</span></td>
+                <td class="text-end"><a href="http://192.168.100.10" target="_blank" class="btn btn-sm btn-outline-primary">Abrir Site</a></td>
+            </tr>
+            <tr>
+                <td><strong>vsftpd</strong> (Servidor FTP)</td>
+                <td><span class="badge bg-dark border border-secondary text-light">21 / FTP</span></td>
+                <td><span id="status-vsftpd" class="badge bg-secondary">Consultando...</span></td>
+                <td class="text-end"><a th:href="@{/arquivos}" class="btn btn-sm btn-outline-primary">Arquivos</a></td>
+            </tr>
+            <tr>
+                <td><strong>Postfix</strong> (Servidor SMTP)</td>
+                <td><span class="badge bg-dark border border-secondary text-light">25 / SMTP</span></td>
+                <td><span id="status-postfix" class="badge bg-secondary">Consultando...</span></td>
+                <td class="text-end"><a th:href="@{/email}" class="btn btn-sm btn-outline-primary">Enviar E-mail</a></td>
+            </tr>
+            <tr>
+                <td><strong>Dovecot</strong> (Servidor IMAP)</td>
+                <td><span class="badge bg-dark border border-secondary text-light">143, 993 / IMAP</span></td>
+                <td><span id="status-dovecot" class="badge bg-secondary">Consultando...</span></td>
+                <td class="text-end"><a th:href="@{/email}" class="btn btn-sm btn-outline-primary">Ver Caixas</a></td>
+            </tr>
+            <tr>
+                <td><strong>OpenSSH</strong> (Acesso Remoto)</td>
+                <td><span class="badge bg-dark border border-secondary text-light">22 / SSH</span></td>
+                <td><span id="status-ssh" class="badge bg-secondary">Consultando...</span></td>
+                <td class="text-end"><a th:href="@{/ssh}" class="btn btn-sm btn-outline-primary">Configurar</a></td>
+            </tr>
             </tbody>
         </table>
     </div>
@@ -139,76 +152,65 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         document.getElementById('last-update').innerHTML = `<i class="bi bi-clock-history me-1"></i> Atualizado em: ${new Date().toLocaleTimeString()}`;
+        const axis = { color: '#c8c8c8' };
 
-        const ctx = document.getElementById('recursosChart').getContext('2d');
-        recursosChart = new Chart(ctx, {
+        recursosChart = new Chart(document.getElementById('recursosChart').getContext('2d'), {
             type: 'line',
             data: {
                 labels: [],
                 datasets: [
-                    {
-                        label: 'CPU (%)',
-                        borderColor: '#22c55e',
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        data: [],
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 2
-                    },
-                    {
-                        label: 'Memória RAM (%)',
-                        borderColor: '#0dcaf0',
-                        backgroundColor: 'rgba(13, 202, 240, 0.1)',
-                        data: [],
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 2
-                    }
+                    { label: 'CPU (%)', borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', data: [], fill: true, tension: 0.4, borderWidth: 2 },
+                    { label: 'Memória RAM (%)', borderColor: '#0dcaf0', backgroundColor: 'rgba(13, 202, 240, 0.1)', data: [], fill: true, tension: 0.4, borderWidth: 2 }
                 ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: true, max: 100, grid: { color: '#2a2a2a' }, ticks: { color: '#888888' } },
-                    x: { grid: { color: '#2a2a2a' }, ticks: { color: '#888888', maxRotation: 0 } }
+                    y: { beginAtZero: true, max: 100, grid: { color: '#2a2a2a' }, ticks: axis },
+                    x: { grid: { color: '#2a2a2a' }, ticks: { color: '#c8c8c8', maxRotation: 0 } }
                 },
-                plugins: { legend: { labels: { color: '#d0d0d0' } } }
+                plugins: { legend: { labels: { color: '#e6e6e6' } } }
             }
         });
 
-        const ctxLat = document.getElementById('latenciaChart').getContext('2d');
-        latenciaChart = new Chart(ctxLat, {
+        latenciaChart = new Chart(document.getElementById('latenciaChart').getContext('2d'), {
             type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Latência (ms)',
-                    borderColor: '#6366f1',
-                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                    data: [],
-                    fill: true,
-                    tension: 0.4,
-                    borderWidth: 2
-                }]
-            },
+            data: { labels: [], datasets: [{ label: 'Latência (ms)', borderColor: '#818cf8', backgroundColor: 'rgba(129, 140, 248, 0.15)', data: [], fill: true, tension: 0.4, borderWidth: 2 }] },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: true, grid: { color: '#2a2a2a' }, ticks: { color: '#888888' } },
+                    y: { beginAtZero: true, grid: { color: '#2a2a2a' }, ticks: axis },
                     x: { display: false }
                 },
                 plugins: { legend: { display: false } }
             }
         });
 
+        // Polling a cada 5 segundos conforme especificação do trabalho
         setInterval(buscarMetricasEAtualizar, 5000);
         buscarMetricasEAtualizar();
     });
 
     function atualizarDadosManualmente() {
         buscarMetricasEAtualizar();
+    }
+
+    function atualizarBadgeServico(elementId, state) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        if (state === 'active') {
+            el.className = 'badge bg-success';
+            el.innerHTML = '<i class="bi bi-check-circle me-1"></i> Ativo';
+        } else if (state === 'inactive') {
+            el.className = 'badge bg-warning text-dark';
+            el.innerHTML = '<i class="bi bi-dash-circle me-1"></i> Inativo';
+        } else if (state === 'failed') {
+            el.className = 'badge bg-danger';
+            el.innerHTML = '<i class="bi bi-x-circle me-1"></i> Falha';
+        } else {
+            el.className = 'badge bg-secondary';
+            el.innerHTML = '<i class="bi bi-question-circle me-1"></i> Desconhecido';
+        }
     }
 
     function buscarMetricasEAtualizar() {
@@ -218,32 +220,59 @@
                 return response.json();
             })
             .then(data => {
-                const agora = new Date().toLocaleTimeString();
+                const agora = data.timestamp || new Date().toLocaleTimeString();
                 document.getElementById('last-update').innerHTML = `<i class="bi bi-clock-history me-1"></i> Atualizado em: ${agora}`;
 
-                const cpuLimpa = parseFloat(String(data.cpu).replace('%', '')) || 0;
-                const ramLimpa = parseFloat(String(data.ram).replace('%', '')) || 0;
-
-                document.getElementById('val-cpu').innerText = cpuLimpa + '%';
-                document.getElementById('val-ram').innerText = ramLimpa + '%';
-                if (data.disk) document.getElementById('val-disk').innerText = data.disk;
-                if (data.uptime) document.getElementById('val-uptime').innerText = data.uptime;
-
-                recursosChart.data.labels.push(agora);
-                recursosChart.data.datasets[0].data.push(cpuLimpa);
-                recursosChart.data.datasets[1].data.push(ramLimpa);
-                if (recursosChart.data.labels.length > 12) {
-                    recursosChart.data.labels.shift();
-                    recursosChart.data.datasets[0].data.shift();
-                    recursosChart.data.datasets[1].data.shift();
+                if (data.hostname) {
+                    document.getElementById('srv-hostname').innerText = data.hostname;
                 }
-                recursosChart.update();
 
+                if (data.sshOk === false || String(data.cpu).startsWith('Sem SSH') || String(data.cpu).startsWith('Erro')) {
+                    document.getElementById('ssh-alerta').classList.remove('d-none');
+                    document.getElementById('val-cpu').innerText = 'Sem SSH';
+                    document.getElementById('val-ram').innerText = 'Sem SSH';
+                    document.getElementById('val-disk').innerText = data.disk || 'Sem SSH';
+                    document.getElementById('val-uptime').innerText = data.uptime || 'Sem SSH';
+                    document.getElementById('val-ram-detalhes').innerText = 'Falha de comunicação SSH';
+                } else {
+                    document.getElementById('ssh-alerta').classList.add('d-none');
+                    const cpuLimpa = parseFloat(String(data.cpu).replace('%', '')) || 0;
+                    const ramLimpa = parseFloat(String(data.ram).replace('%', '')) || 0;
+
+                    document.getElementById('val-cpu').innerText = cpuLimpa + '%';
+                    document.getElementById('val-ram').innerText = ramLimpa + '%';
+                    if (data.ramDetails) {
+                        document.getElementById('val-ram-detalhes').innerText = data.ramDetails;
+                    }
+                    if (data.disk) document.getElementById('val-disk').innerText = data.disk;
+                    if (data.uptime) document.getElementById('val-uptime').innerText = data.uptime;
+
+                    recursosChart.data.labels.push(agora);
+                    recursosChart.data.datasets[0].data.push(cpuLimpa);
+                    recursosChart.data.datasets[1].data.push(ramLimpa);
+                    if (recursosChart.data.labels.length > 15) {
+                        recursosChart.data.labels.shift();
+                        recursosChart.data.datasets[0].data.shift();
+                        recursosChart.data.datasets[1].data.shift();
+                    }
+                    recursosChart.update();
+                }
+
+                // Atualiza o estado real dos serviços do Debian
+                if (data.services) {
+                    atualizarBadgeServico('status-apache2', data.services.apache2);
+                    atualizarBadgeServico('status-vsftpd', data.services.vsftpd);
+                    atualizarBadgeServico('status-postfix', data.services.postfix);
+                    atualizarBadgeServico('status-dovecot', data.services.dovecot);
+                    atualizarBadgeServico('status-ssh', data.services.ssh);
+                }
+
+                // Latência e status HTTP
                 const lat = Number(data.httpLatency) || 0;
                 document.getElementById('http-latency').innerText = lat + ' ms';
                 latenciaChart.data.labels.push(agora);
                 latenciaChart.data.datasets[0].data.push(lat);
-                if (latenciaChart.data.labels.length > 12) {
+                if (latenciaChart.data.labels.length > 15) {
                     latenciaChart.data.labels.shift();
                     latenciaChart.data.datasets[0].data.shift();
                 }
@@ -259,9 +288,8 @@
                     document.getElementById('http-alerta').classList.remove('d-none');
                 }
             })
-            .catch(error => {
-                console.error('Erro na coleta das métricas:', error);
-                document.getElementById('http-alerta').classList.remove('d-none');
+            .catch(() => {
+                document.getElementById('ssh-alerta').classList.remove('d-none');
                 const agora = new Date().toLocaleTimeString();
                 document.getElementById('last-update').innerHTML = `<i class="bi bi-exclamation-triangle me-1 text-warning"></i> Desatualizado desde: ${agora}`;
             });

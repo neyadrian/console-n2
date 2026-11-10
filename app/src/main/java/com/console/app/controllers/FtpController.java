@@ -1,13 +1,25 @@
 package com.console.app.controllers;
 
+import com.console.app.security.RoleCheck;
 import com.console.app.services.FtpService;
+import com.console.app.services.FtpService.FtpFileInfo;
+import com.console.app.services.FtpService.FtpUploadResult;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @Controller
 public class FtpController {
@@ -17,34 +29,57 @@ public class FtpController {
 
     @GetMapping("/ftp")
     public String paginaFtp() {
-        return "ftp-view"; // Página HTML do módulo FTP
+        return "redirect:/arquivos";
     }
 
-    @PostMapping("/ftp/upload")
-    public String uploadArquivo(@RequestParam("file") MultipartFile file, Model model) {
-        if (file.isEmpty()) {
-            model.addAttribute("mensagem", "Por favor, selecione um ficheiro.");
-            return "ftp-view";
+    @GetMapping("/arquivos")
+    public String arquivosPage(Model model) {
+        List<FtpFileInfo> arquivos = ftpService.listFilesDetailed();
+        model.addAttribute("arquivos", arquivos);
+        return "arquivos";
+    }
+
+    @PostMapping({"/arquivos/upload", "/ftp/upload"})
+    public String uploadArquivo(@RequestParam("file") MultipartFile file,
+                                Model model,
+                                Authentication authentication) {
+        if (!RoleCheck.canOperate(authentication)) {
+            model.addAttribute("error", "Acesso recusado pelo backend: o perfil "
+                    + RoleCheck.perfil(authentication)
+                    + " não pode enviar ficheiros via FTP. Apenas ADMINISTRADOR e OPERADOR.");
+            model.addAttribute("arquivos", ftpService.listFilesDetailed());
+            return "arquivos";
         }
 
-        try {
-            // Calcular o hash SHA-256 do ficheiro original enviado
-            String sha256Original = ftpService.calcularSha256(file.getInputStream());
-
-            // Enviar via FTP para o vsftpd
-            boolean sucesso = ftpService.uploadFile(file);
-
-            if (sucesso) {
-                model.addAttribute("mensagem", "Ficheiro enviado com sucesso via FTP!");
-                model.addAttribute("hash", sha256Original);
-                model.addAttribute("nomeArquivo", file.getOriginalFilename());
-            } else {
-                model.addAttribute("mensagem", "Falha na transferência FTP.");
-            }
-        } catch (Exception e) {
-            model.addAttribute("mensagem", "Erro: " + e.getMessage());
+        if (file == null || file.isEmpty()) {
+            model.addAttribute("error", "Por favor, selecione um ficheiro para enviar.");
+            model.addAttribute("arquivos", ftpService.listFilesDetailed());
+            return "arquivos";
         }
 
-        return "ftp-view";
+        FtpUploadResult result = ftpService.uploadFileDetailed(file);
+        if (result.isSuccess()) {
+            model.addAttribute("uploadResult", result);
+            model.addAttribute("message", result.getMessage());
+        } else {
+            model.addAttribute("error", result.getError());
+        }
+
+        model.addAttribute("arquivos", ftpService.listFilesDetailed());
+        return "arquivos";
+    }
+
+    @GetMapping("/arquivos/download/{filename:.+}")
+    public ResponseEntity<Resource> downloadArquivo(@PathVariable("filename") String filename) {
+        byte[] data = ftpService.downloadFile(filename);
+        if (data == null) {
+            return ResponseEntity.notFound().build();
+        }
+        ByteArrayResource resource = new ByteArrayResource(data);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(data.length)
+                .body(resource);
     }
 }

@@ -1,75 +1,160 @@
 <!DOCTYPE html>
-<html lang="pt-PT" data-bs-theme="dark" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="pt-BR" data-bs-theme="dark" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <title>Envio de E-mail - Console N2</title>
+    <title>E-mail SMTP e IMAP - Console N2</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        body { background-color: #121212; color: #e0e0e0; display: flex; min-height: 100vh; margin: 0; font-family: system-ui, -apple-system, sans-serif; }
-        .sidebar { width: 250px; background-color: #181818; border-right: 1px solid #282828; padding: 24px 16px; display: flex; flex-direction: column; flex-shrink: 0; min-height: 100vh; }
-        .sidebar-brand { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #282828; text-align: center; }
-        .sidebar-brand h5 { color: #22c55e; font-size: 1.25rem; font-weight: 700; margin: 0 0 4px 0; }
-        .sidebar-brand small { color: #888888; font-size: 0.85rem; }
-        .nav-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-        .nav-item-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: #a0a0a0; text-decoration: none; border-radius: 8px; font-size: 0.95rem; transition: all 0.15s ease-in-out; }
-        .nav-item-link:hover { background-color: #222222; color: #ffffff; }
-        .nav-item-link.active { background-color: #2a2a2a; color: #ffffff; font-weight: 500; }
-        .main-wrapper { flex-grow: 1; padding: 36px 40px; overflow-y: auto; background-color: #121212; }
-        .content-card { background-color: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 10px; padding: 24px; margin-bottom: 24px; max-width: 750px; }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/console.css}">
 </head>
 <body>
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <h5>IFCE Console</h5>
-        <small>N2 - Redes II</small>
-    </div>
-    <div class="mb-3 px-2 text-center">
-        <small class="text-muted d-block">Usuário logado</small>
-        <span class="badge bg-secondary" sec:authentication="name">user</span>
-    </div>
-    <ul class="nav-list">
-        <li><a th:href="@{/dashboard}" class="nav-item-link"><i class="bi bi-house"></i> Visão Geral</a></li>
-        <li><a th:href="@{/arquivos}" class="nav-item-link"><i class="bi bi-folder"></i> Arquivos (FTP)</a></li>
-        <li><a th:href="@{/email}" class="nav-item-link active"><i class="bi bi-envelope"></i> E-mail</a></li>
-        <li><a th:href="@{/ssh}" class="nav-item-link"><i class="bi bi-terminal"></i> Acesso SSH</a></li>
-        <li><a th:href="@{/logs}" class="nav-item-link"><i class="bi bi-journal-text"></i> Logs Técnicos</a></li>
-    </ul>
-    <div class="mt-auto pt-3 border-top border-secondary">
-        <form th:action="@{/logout}" method="post">
-            <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-box-arrow-right"></i> Sair</button>
-        </form>
-    </div>
-</div>
+<div th:replace="~{fragments/chrome :: sidebar('email')}"></div>
 
 <div class="main-wrapper">
-    <h2 class="mb-4 text-white"><i class="bi bi-envelope-paper me-2"></i> Envio de E-mail (SMTP)</h2>
-
-    <div th:if="${sucesso}" class="alert alert-success" th:text="${sucesso}"></div>
-    <div th:if="${erro}" class="alert alert-danger" th:text="${erro}"></div>
-
-    <div class="alert alert-secondary" sec:authorize="hasRole('LEITOR')">
-        Perfil LEITOR: envio de e-mail está bloqueado.
+    <div th:replace="~{fragments/chrome :: userbar}"></div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="text-white mb-1"><i class="bi bi-envelope-paper me-2"></i> Módulo de Correio (SMTP Postfix / IMAP Dovecot)</h2>
+            <small class="text-muted"><i class="bi bi-hdd-network me-1"></i> Servidor: Debian 192.168.100.10 (SMTP:25 | IMAP:143)</small>
+        </div>
     </div>
-    <div class="content-card" sec:authorize="hasAnyRole('ADMINISTRADOR','OPERADOR')">
-        <form th:action="@{/enviar-email}" method="post">
-            <div class="mb-3">
-                <label class="form-label text-muted">Destinatário:</label>
-                <input type="email" name="destinatario" class="form-control bg-dark text-white border-secondary" required placeholder="email@exemplo.com">
+
+    <div class="alert alert-warning" sec:authorize="hasRole('LEITOR')">
+        <i class="bi bi-exclamation-triangle me-2"></i> Aviso: o perfil <strong>LEITOR</strong> pode consultar as mensagens recebidas e enviadas, mas o envio será recusado pelo backend.
+    </div>
+
+    <!-- Alertas -->
+    <div th:if="${sucesso}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i><span th:text="${sucesso}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${erro}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-x-circle me-2"></i><span th:text="${erro}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Barra de Seleção de Conta Ativa (Requisito 2.4: aluno@empresa.test e suporte@empresa.test) -->
+    <div class="content-card mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <span class="text-muted d-block small">Conta de Teste Selecionada:</span>
+                <span class="fs-5 fw-bold text-info">
+                    <i class="bi bi-person-badge me-1"></i>
+                    <span th:text="${contaSelecionada == 'suporte' ? 'suporte@empresa.test' : 'aluno@empresa.test'}">aluno@empresa.test</span>
+                </span>
             </div>
-            <div class="mb-3">
-                <label class="form-label text-muted">Assunto:</label>
-                <input type="text" name="assunto" class="form-control bg-dark text-white border-secondary" required placeholder="Assunto do alerta">
+            <div class="btn-group" role="group">
+                <a th:href="@{/email(conta='aluno', pasta=${pastaSelecionada})}" 
+                   class="btn btn-sm" th:classappend="${contaSelecionada == 'aluno'} ? 'btn-primary' : 'btn-outline-secondary text-light'">
+                    <i class="bi bi-person me-1"></i> Conta aluno@empresa.test
+                </a>
+                <a th:href="@{/email(conta='suporte', pasta=${pastaSelecionada})}" 
+                   class="btn btn-sm" th:classappend="${contaSelecionada == 'suporte'} ? 'btn-primary' : 'btn-outline-secondary text-light'">
+                    <i class="bi bi-headset me-1"></i> Conta suporte@empresa.test
+                </a>
             </div>
-            <div class="mb-4">
-                <label class="form-label text-muted">Mensagem:</label>
-                <textarea name="mensagem" class="form-control bg-dark text-white border-secondary" rows="5" required placeholder="Escreva a mensagem aqui..."></textarea>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Formulário de Envio SMTP + Cópia em Enviados -->
+        <div class="col-lg-6">
+            <div class="content-card h-100">
+                <h5 class="text-white mb-3"><i class="bi bi-send me-2"></i> Redigir e Enviar Mensagem (SMTP)</h5>
+                
+                <form th:action="@{/email/enviar}" method="post">
+                    <div class="mb-3">
+                        <label class="form-label text-light">Remetente</label>
+                        <select name="remetente" id="campoRemetente" class="form-select bg-dark border-secondary text-white" required>
+                            <option value="aluno@empresa.test" th:selected="${contaSelecionada == 'aluno'}">aluno@empresa.test</option>
+                            <option value="suporte@empresa.test" th:selected="${contaSelecionada == 'suporte'}">suporte@empresa.test</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-light">Destinatário</label>
+                        <div class="input-group">
+                            <input type="email" name="destinatario" id="campoDestinatario" class="form-control bg-dark border-secondary text-white" 
+                                   th:value="${contaSelecionada == 'aluno' ? 'suporte@empresa.test' : 'aluno@empresa.test'}" required>
+                            <button type="button" class="btn btn-outline-secondary text-light" onclick="inverterContas();" title="Alternar remetente/destinatário">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-light">Assunto</label>
+                        <input type="text" name="assunto" class="form-control bg-dark border-secondary text-white" value="Teste N2" required placeholder="Ex: Teste N2">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-light">Conteúdo da Mensagem</label>
+                        <textarea name="mensagem" class="form-control bg-dark border-secondary text-white" rows="4" required placeholder="Escreva a mensagem de teste aqui...">Mensagem de validação de envio SMTP e gravação em Enviados (N2).</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-send-fill me-2"></i> Enviar Mensagem (Postfix) & Salvar Cópia (Dovecot)
+                    </button>
+                </form>
             </div>
-            <button type="submit" class="btn btn-primary"><i class="bi bi-send me-2"></i> Enviar Mensagem</button>
-        </form>
+        </div>
+
+        <!-- Consulta de Caixas IMAP (INBOX e Sent) -->
+        <div class="col-lg-6">
+            <div class="content-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-white mb-0"><i class="bi bi-inbox me-2"></i> Caixas Postais IMAP (Dovecot)</h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a th:href="@{/email(conta=${contaSelecionada}, pasta='INBOX')}" 
+                           class="btn" th:classappend="${pastaSelecionada == 'INBOX'} ? 'btn-info' : 'btn-outline-secondary text-light'">
+                            <i class="bi bi-envelope-open me-1"></i> Recebidas
+                        </a>
+                        <a th:href="@{/email(conta=${contaSelecionada}, pasta='Sent')}" 
+                           class="btn" th:classappend="${pastaSelecionada == 'Sent'} ? 'btn-info' : 'btn-outline-secondary text-light'">
+                            <i class="bi bi-send-check me-1"></i> Enviados
+                        </a>
+                    </div>
+                </div>
+
+                <div class="p-2 mb-3 rounded bg-dark border border-secondary d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        Visualizando pasta: <strong class="text-white" th:text="${pastaSelecionada == 'Sent' ? 'Enviados (Sent)' : 'Recebidas (INBOX)'}">INBOX</strong> 
+                        do usuário <strong class="text-info" th:text="${contaSelecionada}">aluno</strong>
+                    </small>
+                    <a th:href="@{/email(conta=${contaSelecionada}, pasta=${pastaSelecionada})}" class="btn btn-sm btn-outline-secondary text-light py-0">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+
+                <ul class="list-group list-group-flush bg-transparent" style="max-height: 380px; overflow-y: auto;">
+                    <li th:each="msg : ${mensagens}" class="list-group-item bg-dark text-white border-secondary mb-1 rounded">
+                        <i class="bi bi-envelope text-primary me-2"></i>
+                        <span th:text="${msg}">Assunto do e-mail</span>
+                    </li>
+                    <li th:if="${#lists.isEmpty(mensagens)}" class="list-group-item bg-dark border-secondary text-center text-muted py-4">
+                        <i class="bi bi-mailbox fs-3 d-block mb-2"></i>
+                        Nenhuma mensagem encontrada nesta pasta no Dovecot.
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function inverterContas() {
+        const rem = document.getElementById('campoRemetente');
+        const dest = document.getElementById('campoDestinatario');
+        if (rem.value === 'aluno@empresa.test') {
+            rem.value = 'suporte@empresa.test';
+            dest.value = 'aluno@empresa.test';
+        } else {
+            rem.value = 'aluno@empresa.test';
+            dest.value = 'suporte@empresa.test';
+        }
+    }
+</script>
 </body>
 </html>
