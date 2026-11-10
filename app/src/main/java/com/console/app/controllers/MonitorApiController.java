@@ -1,6 +1,6 @@
 package com.console.app.controllers; // Ajuste para o seu package
 
-import com.console.app.services.SshService; 
+import com.console.app.services.SshService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
