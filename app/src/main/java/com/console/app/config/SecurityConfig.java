@@ -18,15 +18,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // CSRF desativado para evitar o Erro 403 nas operações locais
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // 1. TODAS as rotas públicas juntas PRIMEIRO
                         .requestMatchers("/login", "/css/**", "/js/**", "/img/**").permitAll()
-
-                        // 2. BLOQUEIO DE ESCRITA NO BACKEND: Leitor NÃO faz requisições POST (Envio de Arquivo, E-mail, Alteração SSH)
+                        .requestMatchers("/logout").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/ssh/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/arquivos/**", "/ftp/**", "/enviar-email").hasAnyRole("ADMINISTRADOR", "OPERADOR")
                         .requestMatchers(HttpMethod.POST).hasAnyRole("ADMINISTRADOR", "OPERADOR")
-
-                        // 3. A regra geral "para o resto" SEMPRE NO FIM
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
@@ -37,14 +35,14 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")
                         .permitAll()
-                );
+                )
+                .exceptionHandling(ex -> ex.accessDeniedPage("/dashboard?denied"));
 
         return http.build();
     }
 
     @Bean
     public UserDetailsService userDetailsService() {
-        // Criação dos 3 perfis exigidos pelo professor (senhas simples para o laboratório)
         UserDetails admin = User.withDefaultPasswordEncoder()
                 .username("admin")
                 .password("123")

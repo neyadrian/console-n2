@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-bs-theme="dark" xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" data-bs-theme="dark" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <title>Logs Técnicos - Console N2</title>
@@ -25,6 +25,10 @@
     <div class="sidebar-brand">
         <h5>IFCE Console</h5>
         <small>N2 - Redes II</small>
+    </div>
+    <div class="mb-3 px-2 text-center">
+        <small class="text-muted d-block">Usuário logado</small>
+        <span class="badge bg-secondary" sec:authentication="name">user</span>
     </div>
     <ul class="nav-list">
         <li><a th:href="@{/dashboard}" class="nav-item-link"><i class="bi bi-house"></i> Visão Geral</a></li>

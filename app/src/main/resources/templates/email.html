@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-PT" data-bs-theme="dark" xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-PT" data-bs-theme="dark" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <title>Envio de E-mail - Console N2</title>
@@ -25,6 +25,10 @@
         <h5>IFCE Console</h5>
         <small>N2 - Redes II</small>
     </div>
+    <div class="mb-3 px-2 text-center">
+        <small class="text-muted d-block">Usuário logado</small>
+        <span class="badge bg-secondary" sec:authentication="name">user</span>
+    </div>
     <ul class="nav-list">
         <li><a th:href="@{/dashboard}" class="nav-item-link"><i class="bi bi-house"></i> Visão Geral</a></li>
         <li><a th:href="@{/arquivos}" class="nav-item-link"><i class="bi bi-folder"></i> Arquivos (FTP)</a></li>
@@ -45,7 +49,10 @@
     <div th:if="${sucesso}" class="alert alert-success" th:text="${sucesso}"></div>
     <div th:if="${erro}" class="alert alert-danger" th:text="${erro}"></div>
 
-    <div class="content-card">
+    <div class="alert alert-secondary" sec:authorize="hasRole('LEITOR')">
+        Perfil LEITOR: envio de e-mail está bloqueado.
+    </div>
+    <div class="content-card" sec:authorize="hasAnyRole('ADMINISTRADOR','OPERADOR')">
         <form th:action="@{/enviar-email}" method="post">
             <div class="mb-3">
                 <label class="form-label text-muted">Destinatário:</label>

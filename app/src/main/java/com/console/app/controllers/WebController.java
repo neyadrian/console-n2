@@ -5,6 +5,7 @@ import com.console.app.services.EmailService;
 import com.console.app.services.FtpService;
 import com.console.app.services.SshIntegrationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,8 +36,15 @@ public class WebController {
     }
 
     @GetMapping({"", "/", "/dashboard"})
-    public String dashboard(Model model) {
+    public String dashboard(Model model, Authentication authentication) {
         model.addAttribute("metricas", metricsService.getMetrics());
+        if (authentication != null) {
+            model.addAttribute("usuarioLogado", authentication.getName());
+            model.addAttribute("perfilLogado", authentication.getAuthorities().stream()
+                    .findFirst()
+                    .map(a -> a.getAuthority().replace("ROLE_", ""))
+                    .orElse("LEITOR"));
+        }
         return "dashboard";
     }
 

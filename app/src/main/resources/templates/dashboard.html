@@ -11,6 +11,7 @@
         .sidebar-brand { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #282828; text-align: center; }
         .sidebar-brand h5 { color: #22c55e; font-size: 1.25rem; font-weight: 700; margin: 0 0 4px 0; }
         .sidebar-brand small { color: #888888; font-size: 0.85rem; }
+        .user-box { background: #222; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 16px; text-align: center; }
         .nav-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
         .nav-item-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: #a0a0a0; text-decoration: none; border-radius: 8px; font-size: 0.95rem; transition: all 0.15s ease-in-out; }
         .nav-item-link:hover { background-color: #222222; color: #ffffff; }
@@ -33,10 +34,11 @@
         <h5>IFCE Console</h5>
         <small>N2 - Redes II</small>
     </div>
-    <!-- Informação do Usuário Logado -->
-    <div class="mb-4 px-3 text-center">
-        <small class="text-muted d-block mb-1">Logado como:</small>
-        <span class="badge bg-secondary" sec:authentication="name">Usuário</span>
+    <div class="user-box">
+        <small class="text-muted d-block mb-1">Usuário logado</small>
+        <div class="fw-semibold text-white" th:text="${usuarioLogado} ?: ${#authentication.name}">admin</div>
+        <span class="badge bg-success mt-1" th:text="${perfilLogado} ?: 'LEITOR'">ADMINISTRADOR</span>
+        <div class="small text-muted mt-1" sec:authorize="hasRole('LEITOR')">Somente leitura</div>
     </div>
     <ul class="nav-list">
         <li><a th:href="@{/dashboard}" class="nav-item-link active"><i class="bi bi-house"></i> Visão Geral</a></li>
@@ -63,37 +65,34 @@
         </button>
     </div>
 
-    <!-- Cartões de Métricas Iniciais -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="metric-box">
                 <div class="metric-title"><i class="bi bi-cpu"></i> CPU</div>
-                <div class="metric-value" id="val-cpu" th:text="${metricas != null ? (metricas['cpuUsage'] ?: metricas['cpu'] ?: '0%') : '0%'}">0%</div>
+                <div class="metric-value" id="val-cpu" th:text="${metricas != null ? (metricas['cpu'] ?: '0%') : '0%'}">0%</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="metric-box">
                 <div class="metric-title"><i class="bi bi-memory"></i> Memória RAM</div>
-                <div class="metric-value text-info" id="val-ram" th:text="${metricas != null ? (metricas['memoryUsage'] ?: metricas['ram'] ?: metricas['memory'] ?: '0%') : '0%'}">0%</div>
+                <div class="metric-value text-info" id="val-ram" th:text="${metricas != null ? (metricas['memoria'] ?: '0') : '0'}">0</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="metric-box">
-                <div class="metric-title"><i class="bi bi-hdd"></i> Disco (/srv)</div>
-                <div class="metric-value text-warning" th:text="${metricas != null ? (metricas['diskUsage'] ?: metricas['disco'] ?: metricas['disk'] ?: '0%') : '0%'}">0%</div>
+                <div class="metric-title"><i class="bi bi-hdd"></i> Disco</div>
+                <div class="metric-value text-warning" id="val-disk" th:text="${metricas != null ? (metricas['disco'] ?: '0') : '0'}">0</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="metric-box">
                 <div class="metric-title"><i class="bi bi-clock"></i> Tempo Ativo</div>
-                <div class="metric-value text-light" th:text="${metricas != null ? (metricas['uptime'] ?: '0h') : '0h'}">0h</div>
+                <div class="metric-value text-light" id="val-uptime" th:text="${metricas != null ? (metricas['uptime'] ?: '0h') : '0h'}">0h</div>
             </div>
         </div>
     </div>
 
-    <!-- Gráfico e Latência HTTP -->
     <div class="row g-3 mb-4">
-        <!-- Coluna do Gráfico -->
         <div class="col-lg-8">
             <div class="content-card h-100 mb-0">
                 <h6 class="text-white mb-4"><i class="bi bi-graph-up-arrow me-2"></i> Histórico de CPU e Memória (Tempo Real)</h6>
@@ -102,19 +101,20 @@
                 </div>
             </div>
         </div>
-        <!-- Coluna da Latência HTTP (Requisito 2.2 do documento) -->
         <div class="col-lg-4">
-            <div class="content-card h-100 mb-0 d-flex flex-column justify-content-center align-items-center text-center">
-                <h6 class="text-white mb-4 w-100 text-start"><i class="bi bi-globe me-2"></i> Latência HTTP (Apache)</h6>
-                <h2 class="display-4 text-primary mb-2 fw-bold" id="http-latency">-- ms</h2>
+            <div class="content-card h-100 mb-0">
+                <h6 class="text-white mb-3"><i class="bi bi-globe me-2"></i> Latência HTTP (Apache)</h6>
+                <h2 class="display-5 text-primary mb-2 fw-bold" id="http-latency">-- ms</h2>
                 <div class="text-muted mb-2">Código HTTP: <span id="http-status" class="badge bg-secondary">--</span></div>
                 <small class="text-muted"><i class="bi bi-hdd-network me-1"></i> 192.168.100.10</small>
                 <div id="http-alerta" class="alert alert-danger p-2 mt-3 d-none" style="font-size: 0.85rem;">Falha na comunicação com o servidor HTTP.</div>
+                <div style="height: 140px; width: 100%; margin-top: 16px;">
+                    <canvas id="latenciaChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Tabela de Serviços -->
     <div class="content-card">
         <h5 class="text-white mb-4"><i class="bi bi-server me-2"></i> Estado dos Serviços Integrados</h5>
         <table class="custom-table">
@@ -131,16 +131,13 @@
     </div>
 </div>
 
-<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Importação do Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
     let recursosChart;
+    let latenciaChart;
 
     document.addEventListener("DOMContentLoaded", function () {
-        // Regista a hora da primeira carga da página
         document.getElementById('last-update').innerHTML = `<i class="bi bi-clock-history me-1"></i> Atualizado em: ${new Date().toLocaleTimeString()}`;
 
         const ctx = document.getElementById('recursosChart').getContext('2d');
@@ -173,26 +170,40 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: { color: '#2a2a2a' },
-                        ticks: { color: '#888888' }
-                    },
-                    x: {
-                        grid: { color: '#2a2a2a' },
-                        ticks: { color: '#888888', maxRotation: 0 }
-                    }
+                    y: { beginAtZero: true, max: 100, grid: { color: '#2a2a2a' }, ticks: { color: '#888888' } },
+                    x: { grid: { color: '#2a2a2a' }, ticks: { color: '#888888', maxRotation: 0 } }
                 },
-                plugins: {
-                    legend: { labels: { color: '#d0d0d0' } }
-                }
+                plugins: { legend: { labels: { color: '#d0d0d0' } } }
             }
         });
 
-        // Inicia o ciclo de atualização automática a cada 5 segundos
+        const ctxLat = document.getElementById('latenciaChart').getContext('2d');
+        latenciaChart = new Chart(ctxLat, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Latência (ms)',
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    data: [],
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#2a2a2a' }, ticks: { color: '#888888' } },
+                    x: { display: false }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
         setInterval(buscarMetricasEAtualizar, 5000);
-        // Executa imediatamente a primeira vez
         buscarMetricasEAtualizar();
     });
 
@@ -201,8 +212,6 @@
     }
 
     function buscarMetricasEAtualizar() {
-        // Esta rota '/api/monitor' deve ser criada no seu Spring Boot retornando um JSON.
-        // Exemplo esperado do JSON: { "cpu": 25, "ram": 40, "httpLatency": 12, "httpStatus": 200 }
         fetch('/api/monitor')
             .then(response => {
                 if (!response.ok) throw new Error("Falha na comunicação");
@@ -210,22 +219,19 @@
             })
             .then(data => {
                 const agora = new Date().toLocaleTimeString();
-
-                // Atualiza a interface de Texto
                 document.getElementById('last-update').innerHTML = `<i class="bi bi-clock-history me-1"></i> Atualizado em: ${agora}`;
 
-                // Trata a CPU e RAM para o gráfico e para os cartões superiores
                 const cpuLimpa = parseFloat(String(data.cpu).replace('%', '')) || 0;
                 const ramLimpa = parseFloat(String(data.ram).replace('%', '')) || 0;
 
                 document.getElementById('val-cpu').innerText = cpuLimpa + '%';
                 document.getElementById('val-ram').innerText = ramLimpa + '%';
+                if (data.disk) document.getElementById('val-disk').innerText = data.disk;
+                if (data.uptime) document.getElementById('val-uptime').innerText = data.uptime;
 
-                // Atualiza o Gráfico Chart.js
                 recursosChart.data.labels.push(agora);
                 recursosChart.data.datasets[0].data.push(cpuLimpa);
                 recursosChart.data.datasets[1].data.push(ramLimpa);
-
                 if (recursosChart.data.labels.length > 12) {
                     recursosChart.data.labels.shift();
                     recursosChart.data.datasets[0].data.shift();
@@ -233,17 +239,24 @@
                 }
                 recursosChart.update();
 
-                // Atualiza a Latência HTTP
-                document.getElementById('http-latency').innerText = (data.httpLatency || '--') + ' ms';
+                const lat = Number(data.httpLatency) || 0;
+                document.getElementById('http-latency').innerText = lat + ' ms';
+                latenciaChart.data.labels.push(agora);
+                latenciaChart.data.datasets[0].data.push(lat);
+                if (latenciaChart.data.labels.length > 12) {
+                    latenciaChart.data.labels.shift();
+                    latenciaChart.data.datasets[0].data.shift();
+                }
+                latenciaChart.update();
 
                 const statusElement = document.getElementById('http-status');
                 statusElement.innerText = data.httpStatus || '--';
-
                 if (data.httpStatus === 200) {
                     statusElement.className = "badge bg-success";
                     document.getElementById('http-alerta').classList.add('d-none');
                 } else {
                     statusElement.className = "badge bg-warning text-dark";
+                    document.getElementById('http-alerta').classList.remove('d-none');
                 }
             })
             .catch(error => {
