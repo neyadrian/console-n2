@@ -47,8 +47,8 @@ public class EmailService {
             smtpProps.put("mail.smtp.port", String.valueOf(smtpPort));
             smtpProps.put("mail.smtp.auth", "false");
             smtpProps.put("mail.smtp.starttls.enable", "false");
-            smtpProps.put("mail.smtp.connectiontimeout", "5000");
-            smtpProps.put("mail.smtp.timeout", "5000");
+            smtpProps.put("mail.smtp.connectiontimeout", "3000");
+            smtpProps.put("mail.smtp.timeout", "3000");
 
             Session smtpSession = Session.getInstance(smtpProps, null);
             MimeMessage message = new MimeMessage(smtpSession);
@@ -140,39 +140,49 @@ public class EmailService {
                 try { store.close(); } catch (Exception ignored) {}
             }
         } catch (Exception e) {
-            lista.add("Aviso IMAP (" + username + "@" + imapHost + "): " + e.getMessage());
+            lista.add("Aviso IMAP (" + username + "@" + imapHost + ":" + imapPort + "): " + e.getMessage());
         }
         return lista;
     }
 
     private Store connectImapStore(String username, String password) throws Exception {
-        // Tenta primeiro IMAP padrão (porta 143 plain/STARTTLS)
-        try {
-            Properties props = new Properties();
-            props.put("mail.store.protocol", "imap");
-            props.put("mail.imap.host", imapHost);
-            props.put("mail.imap.port", String.valueOf(imapPort > 0 ? imapPort : 143));
-            props.put("mail.imap.connectiontimeout", "4000");
-            props.put("mail.imap.timeout", "4000");
+        Properties props = new Properties();
+        props.put("mail.store.protocol", "imap");
+        props.put("mail.imap.host", imapHost);
+        props.put("mail.imap.port", String.valueOf(imapPort > 0 ? imapPort : 143));
+        props.put("mail.imap.auth.plain.disable", "false");
+        props.put("mail.imap.starttls.enable", "false");
+        props.put("mail.imap.ssl.enable", "false");
+        props.put("mail.imap.connectiontimeout", "2500");
+        props.put("mail.imap.timeout", "2500");
 
+        try {
             Session session = Session.getInstance(props, null);
             Store store = session.getStore("imap");
             store.connect(imapHost, imapPort > 0 ? imapPort : 143, username, password);
             return store;
         } catch (Exception e1) {
-            // Se falhar e a porta não for 993, tenta IMAPS (porta 993 SSL)
-            Properties propsSsl = new Properties();
-            propsSsl.put("mail.store.protocol", "imaps");
-            propsSsl.put("mail.imaps.host", imapHost);
-            propsSsl.put("mail.imaps.port", "993");
-            propsSsl.put("mail.imaps.ssl.trust", "*");
-            propsSsl.put("mail.imaps.connectiontimeout", "4000");
-            propsSsl.put("mail.imaps.timeout", "4000");
+            // Se falhou na 143, checa se porta 993 responde de forma não-bloqueante
+            if (imapPort == 993) {
+                throw e1;
+            }
+            try {
+                Properties propsSsl = new Properties();
+                propsSsl.put("mail.store.protocol", "imaps");
+                propsSsl.put("mail.imaps.host", imapHost);
+                propsSsl.put("mail.imaps.port", "993");
+                propsSsl.put("mail.imaps.ssl.trust", "*");
+                propsSsl.put("mail.imaps.connectiontimeout", "1500");
+                propsSsl.put("mail.imaps.timeout", "1500");
 
-            Session sessionSsl = Session.getInstance(propsSsl, null);
-            Store storeSsl = sessionSsl.getStore("imaps");
-            storeSsl.connect(imapHost, 993, username, password);
-            return storeSsl;
+                Session sessionSsl = Session.getInstance(propsSsl, null);
+                Store storeSsl = sessionSsl.getStore("imaps");
+                storeSsl.connect(imapHost, 993, username, password);
+                return storeSsl;
+            } catch (Exception ignored) {
+                // Se SSL também falhar, lança a exceção original da porta 143 para diagnóstico real
+                throw e1;
+            }
         }
     }
 }

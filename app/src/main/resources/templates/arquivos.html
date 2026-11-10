@@ -24,11 +24,11 @@
     </div>
 
     <!-- Alertas de sucesso / erro simples -->
-    <div th:if="${message and uploadResult == null}" class="alert alert-success alert-dismissible fade show" role="alert">
+    <div th:if="${message != null and uploadResult == null}" class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bi bi-check-circle me-2"></i><span th:text="${message}">Sucesso</span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <div th:if="${error != null}" class="alert alert-danger alert-dismissible fade show" role="alert">
         <i class="bi bi-x-circle me-2"></i><span th:text="${error}">Erro</span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>

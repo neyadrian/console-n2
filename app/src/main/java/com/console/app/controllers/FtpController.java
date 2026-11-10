@@ -34,8 +34,15 @@ public class FtpController {
 
     @GetMapping("/arquivos")
     public String arquivosPage(Model model) {
-        List<FtpFileInfo> arquivos = ftpService.listFilesDetailed();
+        List<FtpFileInfo> arquivos;
+        try {
+            arquivos = ftpService.listFilesDetailed();
+        } catch (Exception e) {
+            arquivos = java.util.Collections.emptyList();
+            model.addAttribute("error", "Não foi possível listar os arquivos remotos: " + e.getMessage());
+        }
         model.addAttribute("arquivos", arquivos);
+        model.addAttribute("uploadResult", null);
         return "arquivos";
     }
 

@@ -35,6 +35,11 @@ public class SshService {
     private Session persistentSession = null;
     private volatile String originalHostname = null;
 
+    // Cache simples de métricas para não sobrecarregar a VM Debian com requisições repetidas
+    private volatile Map<String, String> cachedMetrics = null;
+    private volatile long lastMetricsTime = 0;
+    private static final long CACHE_TTL_MS = 3000; // 3 segundos de cache
+
     public String getCurrentHostname() {
         String h = executeCommand("hostnamectl --static 2>/dev/null || hostname");
         if (h != null && !h.startsWith("Erro") && !h.isBlank() && originalHostname == null) {
@@ -62,6 +67,7 @@ public class SshService {
         if (res.startsWith("Erro")) {
             return res;
         }
+        cachedMetrics = null; // Invalida o cache
         return "Hostname alterado para: " + newHostname;
     }
 
@@ -75,15 +81,26 @@ public class SshService {
         if (res.startsWith("Erro")) {
             return res;
         }
+        cachedMetrics = null; // Invalida o cache
         return "Hostname restaurado com sucesso para: " + original;
     }
 
     public Map<String, String> getMetrics() {
+        long now = System.currentTimeMillis();
+        if (cachedMetrics != null && (now - lastMetricsTime < CACHE_TTL_MS)) {
+            return cachedMetrics;
+        }
+
         Map<String, String> metrics = new HashMap<>();
 
-        // Script otimizado que coleta métricas do sistema e status dos serviços da N2 em uma única chamada SSH rápida
-        String script = "CPU=$(top -bn1 2>/dev/null | awk '/Cpu\\(s\\)/{print 100 - $8}' | cut -d'.' -f1); "
-                + "if [ -z \"$CPU\" ]; then CPU=$(awk '/^cpu /{u=$2+$4; t=$2+$3+$4+$5+$6+$7+$8; if(t>0) printf(\"%d\", (u*100)/t); else print 0}' /proc/stat); fi; "
+        // Script super leve: mede CPU em 100ms via /proc/stat sem invocar 'top', 'vmstat' ou comandos pesados
+        String script = "read c u n s i w x y z < /proc/stat; "
+                + "t1=$((u+n+s+i+w+x+y+z)); id1=$i; "
+                + "sleep 0.1; "
+                + "read c u n s i w x y z < /proc/stat; "
+                + "t2=$((u+n+s+i+w+x+y+z)); id2=$i; "
+                + "dt=$((t2-t1)); di=$((id2-id1)); "
+                + "if [ $dt -gt 0 ]; then CPU=$(( (dt-di)*100 / dt )); else CPU=0; fi; "
                 + "RAM=$(free -m | awk '/Mem:/ {if($2>0) printf(\"%d\", ($3/$2)*100); else print 0}'); "
                 + "RAM_DETAILS=$(free -m | awk '/Mem:/ {printf \"%d MB / %d MB\", $3, $2}'); "
                 + "DISK=$(df -h /srv/portal/arquivos 2>/dev/null | awk 'NR==2{print $3\" / \"$2}'); "
@@ -138,19 +155,19 @@ public class SshService {
         metrics.put("uptime", up.isEmpty() ? "N/A" : up);
         metrics.put("hostname", hostName.isEmpty() ? "Debian" : hostName);
 
-        // Status real dos 5 serviços
         metrics.put("svc_apache2", valueOf(output, "SVC_apache2"));
         metrics.put("svc_vsftpd", valueOf(output, "SVC_vsftpd"));
         metrics.put("svc_postfix", valueOf(output, "SVC_postfix"));
         metrics.put("svc_dovecot", valueOf(output, "SVC_dovecot"));
         metrics.put("svc_ssh", valueOf(output, "SVC_ssh"));
 
+        cachedMetrics = metrics;
+        lastMetricsTime = System.currentTimeMillis();
         return metrics;
     }
 
     public String executeCommand(String command) {
         synchronized (lock) {
-            // Tenta até 2 vezes (reaproveita sessão existente; se cair, reconecta e reexecuta)
             for (int attempt = 1; attempt <= 2; attempt++) {
                 Session session = null;
                 ChannelExec channel = null;
@@ -159,16 +176,32 @@ public class SshService {
                     channel = (ChannelExec) session.openChannel("exec");
                     channel.setCommand(command);
 
+                    InputStream in = channel.getInputStream();
+                    InputStream err = channel.getErrStream();
+
+                    channel.connect(5000);
+
                     ByteArrayOutputStream outStream = new ByteArrayOutputStream();
                     ByteArrayOutputStream errStream = new ByteArrayOutputStream();
-                    channel.setOutputStream(outStream);
-                    channel.setErrStream(errStream);
+                    byte[] tmp = new byte[1024];
 
-                    channel.connect(7000);
-
-                    long deadline = System.currentTimeMillis() + 9000;
-                    while (!channel.isClosed() && System.currentTimeMillis() < deadline) {
-                        Thread.sleep(30);
+                    long deadline = System.currentTimeMillis() + 6000;
+                    while (System.currentTimeMillis() < deadline) {
+                        while (in.available() > 0) {
+                            int i = in.read(tmp, 0, 1024);
+                            if (i < 0) break;
+                            outStream.write(tmp, 0, i);
+                        }
+                        while (err.available() > 0) {
+                            int i = err.read(tmp, 0, 1024);
+                            if (i < 0) break;
+                            errStream.write(tmp, 0, i);
+                        }
+                        if (channel.isClosed()) {
+                            if (in.available() > 0 || err.available() > 0) continue;
+                            break;
+                        }
+                        Thread.sleep(25);
                     }
 
                     String stdout = outStream.toString("UTF-8").trim();
@@ -190,7 +223,7 @@ public class SshService {
                     }
                 }
             }
-            return "Erro SSH: falha após tentativas de reconexão.";
+            return "Erro SSH: falha de comunicação com o Debian.";
         }
     }
 
@@ -201,7 +234,7 @@ public class SshService {
             try {
                 session = getOrCreateSession();
                 sftp = (ChannelSftp) session.openChannel("sftp");
-                sftp.connect(8000);
+                sftp.connect(6000);
                 ensureDir(sftp, remoteDir);
                 sftp.cd(remoteDir);
                 sftp.put(inputStream, filename);
@@ -224,7 +257,7 @@ public class SshService {
             try {
                 session = getOrCreateSession();
                 sftp = (ChannelSftp) session.openChannel("sftp");
-                sftp.connect(8000);
+                sftp.connect(6000);
                 Vector<?> entries = sftp.ls(remoteDir);
                 for (Object entry : entries) {
                     ChannelSftp.LsEntry ls = (ChannelSftp.LsEntry) entry;
@@ -260,8 +293,8 @@ public class SshService {
         session.setConfig("TCPKeepAlive", "yes");
         session.setServerAliveInterval(15);
         session.setServerAliveCountMax(3);
-        session.setTimeout(12000);
-        session.connect(10000);
+        session.setTimeout(8000);
+        session.connect(7000);
 
         persistentSession = session;
         return persistentSession;
