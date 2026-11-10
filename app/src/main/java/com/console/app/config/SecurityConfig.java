@@ -2,6 +2,7 @@ package com.console.app.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -17,11 +18,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // CSRF desativado para evitar o Erro 403
+                .csrf(csrf -> csrf.disable()) // CSRF desativado para evitar o Erro 403 nas operações locais
                 .authorizeHttpRequests(auth -> auth
                         // 1. TODAS as rotas públicas juntas PRIMEIRO
                         .requestMatchers("/login", "/css/**", "/js/**", "/img/**").permitAll()
-                        // 2. A regra geral "para o resto" SEMPRE NO FIM
+
+                        // 2. BLOQUEIO DE ESCRITA NO BACKEND: Leitor NÃO faz requisições POST (Envio de Arquivo, E-mail, Alteração SSH)
+                        .requestMatchers(HttpMethod.POST).hasAnyRole("ADMINISTRADOR", "OPERADOR")
+
+                        // 3. A regra geral "para o resto" SEMPRE NO FIM
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
