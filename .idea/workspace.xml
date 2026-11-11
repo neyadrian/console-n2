@@ -6,6 +6,17 @@
   <component name="ChangeListManager">
     <list default="true" id="f8bbb83a-3d6c-4864-affa-6731a65b4f9e" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/console/app/controllers/WebController.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/console/app/controllers/WebController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/DebianMetricsService.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/DebianMetricsService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/EmailService.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/EmailService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/SshService.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/SshService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/resources/static/css/console.css" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/resources/static/css/console.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/resources/templates/arquivos.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/resources/templates/arquivos.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/resources/templates/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/resources/templates/dashboard.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/resources/templates/email.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/resources/templates/email.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/resources/templates/fragments/chrome.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/resources/templates/fragments/chrome.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/resources/templates/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/resources/templates/login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/resources/templates/ssh.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/resources/templates/ssh.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -18,7 +29,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="38" />
+    <option name="cachedIndexableFilesCount" value="43" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -99,6 +110,11 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Meus Projetos\consoleN2\app\target\test-classes" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration name="AppApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="app" />
@@ -129,7 +145,9 @@
       <workItem from="1794226857671" duration="1488000" />
       <workItem from="1794228624214" duration="1027000" />
       <workItem from="1794240832746" duration="3469000" />
-      <workItem from="1794310390872" duration="11602000" />
+      <workItem from="1794310390872" duration="12235000" />
+      <workItem from="1794359977789" duration="2295000" />
+      <workItem from="1794397125189" duration="5197000" />
     </task>
     <servers />
   </component>

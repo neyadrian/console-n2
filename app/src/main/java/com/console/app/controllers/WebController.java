@@ -34,40 +34,51 @@ public class WebController {
     public String viewLogs(@RequestParam(value = "service", required = false, defaultValue = "geral") String service,
                            @RequestParam(value = "lines", required = false, defaultValue = "50") int lines,
                            Model model) {
+
         // Limita a quantidade de linhas para segurança
         int safeLines = Math.min(Math.max(lines, 10), 200);
 
         String command;
+        String pass = "123456";
+
         switch (service.toLowerCase()) {
             case "apache2":
             case "apache":
-                command = "journalctl -u apache2 -n " + safeLines + " --no-pager 2>/dev/null || tail -n " + safeLines + " /var/log/apache2/access.log 2>/dev/null";
+                // Força a leitura do access.log com sudo
+                command = "echo '" + pass + "' | sudo -S tail -n " + safeLines + " /var/log/apache2/access.log 2>/dev/null || journalctl -u apache2 -n " + safeLines + " --no-pager";
                 break;
+
             case "vsftpd":
             case "ftp":
-                command = "journalctl -u vsftpd -n " + safeLines + " --no-pager 2>/dev/null || tail -n " + safeLines + " /var/log/vsftpd.log 2>/dev/null";
+                command = "echo '" + pass + "' | sudo -S journalctl -u vsftpd -n " + safeLines + " --no-pager || echo '" + pass + "' | sudo -S tail -n " + safeLines + " /var/log/vsftpd.log 2>/dev/null";
                 break;
+
             case "postfix":
             case "smtp":
-                command = "journalctl -u postfix -n " + safeLines + " --no-pager 2>/dev/null || tail -n " + safeLines + " /var/log/mail.log 2>/dev/null";
+                command = "echo '" + pass + "' | sudo -S journalctl -u postfix -n " + safeLines + " --no-pager || echo '" + pass + "' | sudo -S tail -n " + safeLines + " /var/log/mail.log 2>/dev/null";
                 break;
+
             case "dovecot":
             case "imap":
-                command = "journalctl -u dovecot -n " + safeLines + " --no-pager 2>/dev/null || tail -n " + safeLines + " /var/log/mail.log 2>/dev/null";
+                command = "echo '" + pass + "' | sudo -S journalctl -u dovecot -n " + safeLines + " --no-pager || echo '" + pass + "' | sudo -S tail -n " + safeLines + " /var/log/mail.log 2>/dev/null";
                 break;
+
             case "ssh":
-                command = "journalctl -u ssh -n " + safeLines + " --no-pager";
+                command = "echo '" + pass + "' | sudo -S journalctl -u ssh -n " + safeLines + " --no-pager";
                 break;
+
             default:
                 service = "geral";
-                command = "journalctl -n " + safeLines + " --no-pager";
+                command = "echo '" + pass + "' | sudo -S journalctl -n " + safeLines + " --no-pager";
                 break;
         }
 
         String logsDebian = sshService.executeCommand(command);
+
         model.addAttribute("logs", logsDebian);
         model.addAttribute("selectedService", service);
         model.addAttribute("selectedLines", safeLines);
+
         return "logs";
     }
 }

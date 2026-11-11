@@ -13,19 +13,24 @@
         <li><a th:href="@{/ssh}" th:classappend="${active == 'ssh'} ? ' active'" class="nav-item-link"><i class="bi bi-terminal"></i> Acesso SSH</a></li>
         <li><a th:href="@{/logs}" th:classappend="${active == 'logs'} ? ' active'" class="nav-item-link"><i class="bi bi-journal-text"></i> Logs Técnicos</a></li>
     </ul>
-    <div class="mt-auto pt-3 border-top border-secondary">
-        <form th:action="@{/logout}" method="post">
-            <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-box-arrow-right"></i> Sair</button>
-        </form>
-    </div>
 </div>
 
 <div th:fragment="userbar" class="top-navbar">
-    <div class="user-chip">
-        <i class="bi bi-person-circle fs-3 text-success"></i>
-        <div>
-            <div class="user-name" th:text="${usuarioLogado} ?: ${#authentication.name}">admin</div>
-            <span class="badge bg-success" th:text="${perfilLogado}">ADMINISTRADOR</span>
+    <div class="user-menu" onclick="this.classList.toggle('open')">
+        <div class="user-chip">
+            <i class="bi bi-person-circle fs-3 text-success"></i>
+            <div>
+                <div class="user-name" th:text="${usuarioLogado} ?: ${#authentication.name}">admin</div>
+                <span class="badge bg-success" th:text="${perfilLogado}">ADMINISTRADOR</span>
+            </div>
+            <i class="bi bi-chevron-down user-chip-caret"></i>
+        </div>
+        <div class="user-menu-dropdown" onclick="event.stopPropagation()">
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                    <i class="bi bi-box-arrow-right me-1"></i> Sair
+                </button>
+            </form>
         </div>
     </div>
 </div>

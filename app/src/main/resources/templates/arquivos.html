@@ -19,9 +19,6 @@
         </div>
     </div>
 
-    <div class="alert alert-warning" sec:authorize="hasRole('LEITOR')">
-        <i class="bi bi-exclamation-triangle me-2"></i> Aviso: o perfil <strong>LEITOR</strong> pode consultar e baixar arquivos, mas o envio será recusado pelo backend.
-    </div>
 
     <!-- Alertas de sucesso / erro simples -->
     <div th:if="${message != null and uploadResult == null}" class="alert alert-success alert-dismissible fade show" role="alert">

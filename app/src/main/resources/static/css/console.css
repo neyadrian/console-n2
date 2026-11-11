@@ -33,6 +33,7 @@ body {
     padding-bottom: 16px;
     border-bottom: 1px solid #2e2e2e;
 }
+.user-menu { position: relative; }
 .user-chip {
     display: flex;
     align-items: center;
@@ -42,8 +43,25 @@ body {
     border-radius: 10px;
     padding: 8px 14px;
     color: #fff;
+    cursor: pointer;
+    user-select: none;
 }
 .user-chip .user-name { font-weight: 600; color: #ffffff; line-height: 1.1; }
+.user-chip-caret { color: #c8c8c8; font-size: 0.85rem; margin-left: 4px; }
+.user-menu-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    min-width: 160px;
+    background: #1e1e1e;
+    border: 1px solid #3a3a3a;
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 20;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.user-menu.open .user-menu-dropdown { display: block; }
 .page-header-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 .page-header-title h2, .main-wrapper h2 { font-size: 1.75rem; font-weight: 600; color: #ffffff; margin: 0; }
 .content-card { background-color: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
