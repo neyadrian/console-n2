@@ -1,8 +1,8 @@
 package com.console.app.controllers;
 
+import com.console.app.repositories.ConfiguracaoVersaoRepository;
 import com.console.app.security.RoleCheck;
-import com.console.app.services.EmailService;
-import com.console.app.services.SshService;
+import com.console.app.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -10,6 +10,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class WebController {
@@ -19,6 +20,21 @@ public class WebController {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private DebianMetricsService debianMetricsService;
+
+    @Autowired
+    private DebianAgentService debianAgentService;
+
+    @Autowired
+    private ServicoConfigService servicoConfigService;
+
+    @Autowired
+    private ConfiguracaoVersaoRepository versaoRepository;
+
+    @Autowired
+    private AuditoriaService auditoriaService;
 
     @GetMapping("/login")
     public String login() {
@@ -80,5 +96,60 @@ public class WebController {
         model.addAttribute("selectedLines", safeLines);
 
         return "logs";
+    }
+
+    @GetMapping("/servicos")
+    public String viewServicos(Model model) {
+        model.addAttribute("metricas", debianMetricsService.getMetricsData());
+        model.addAttribute("configs", servicoConfigService.lerConfiguracoesAtuais());
+        model.addAttribute("historicoConfigs", versaoRepository.findTop15ByOrderByAplicadoEmDesc());
+        return "servicos";
+    }
+
+    // Iniciar, Parar ou Reiniciar serviço (com confirmação no frontend e validação no backend)
+    @PostMapping("/servicos/operar")
+    public String operarServico(@RequestParam String servico,
+                                @RequestParam String acao,
+                                RedirectAttributes redirectAttributes) {
+        try {
+            String resultado = debianAgentService.controlarServico(servico, acao);
+            redirectAttributes.addFlashAttribute("mensagemSucesso", resultado);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("mensagemErro", "Erro: " + e.getMessage());
+        }
+        return "redirect:/servicos";
+    }
+
+    // Alterar configuração validada (Apenas ADMINISTRADOR)
+    @PostMapping("/servicos/configurar")
+    public String configurarServico(@RequestParam String servico,
+                                    @RequestParam String parametro,
+                                    @RequestParam int valor,
+                                    RedirectAttributes redirectAttributes) {
+        try {
+            String resultado = servicoConfigService.alterarConfiguracao(servico, parametro, valor);
+            redirectAttributes.addFlashAttribute("mensagemSucesso", resultado);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("mensagemErro", "Configuração recusada: " + e.getMessage());
+        }
+        return "redirect:/servicos";
+    }
+
+    @PostMapping("/servicos/configurar/restaurar")
+    public String restaurarConfiguracao(@RequestParam Long versaoId,
+                                        RedirectAttributes redirectAttributes) {
+        try {
+            String resultado = servicoConfigService.restaurarUltimaVersao(versaoId);
+            redirectAttributes.addFlashAttribute("mensagemSucesso", resultado);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("mensagemErro", "Falha ao restaurar: " + e.getMessage());
+        }
+        return "redirect:/servicos";
+    }
+
+    @GetMapping("/auditoria")
+    public String viewAuditoria(Model model) {
+        model.addAttribute("registros", auditoriaService.consultarLogsPorPermissao());
+        return "auditoria";
     }
 }
