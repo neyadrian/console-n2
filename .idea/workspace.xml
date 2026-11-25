@@ -5,7 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f8bbb83a-3d6c-4864-affa-6731a65b4f9e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/AuditoriaService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -139,7 +139,7 @@
       <workItem from="1794359977789" duration="2295000" />
       <workItem from="1794397125189" duration="6285000" />
       <workItem from="1795608183657" duration="1253000" />
-      <workItem from="1795623139181" duration="3682000" />
+      <workItem from="1795623139181" duration="5615000" />
     </task>
     <servers />
   </component>
