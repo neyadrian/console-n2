@@ -1,6 +1,7 @@
 package com.console.app.controllers;
 
 import com.console.app.repositories.ConfiguracaoVersaoRepository;
+import com.console.app.repositories.InstanciaVdiRepository;
 import com.console.app.security.RoleCheck;
 import com.console.app.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,12 @@ public class WebController {
 
     @Autowired
     private DhcpService dhcpService;
+
+    @Autowired
+    private VdiService vdiService;
+
+    @Autowired
+    private InstanciaVdiRepository vdiRepository;
 
     @GetMapping("/login")
     public String login() {
@@ -232,5 +239,37 @@ public class WebController {
     public String restaurarConfigDhcp(RedirectAttributes redirectAttributes) {
         redirectAttributes.addFlashAttribute("mensagemSucesso", dhcpService.restaurarBackupDhcp());
         return "redirect:/dhcp";
+    }
+
+    @GetMapping("/vdi")
+    public String viewVdi(Model model) {
+        List<InstanciaVdi> instancias = vdiRepository.findAllByOrderByCriadaEmDesc();
+        // Reconcilia estado e porta RDP (3389) das instâncias ativas antes de renderizar
+        instancias.forEach(vdiService::atualizarProntidao);
+        model.addAttribute("instancias", instancias);
+        return "vdi";
+    }
+
+    @PostMapping("/vdi/solicitar")
+    public String solicitarVm(@RequestParam(defaultValue = "BASICO") String perfil,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            redirectAttributes.addFlashAttribute("mensagemSucesso", vdiService.solicitarNovaVm(perfil));
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("mensagemErro", e.getMessage());
+        }
+        return "redirect:/vdi";
+    }
+
+    @PostMapping("/vdi/operar")
+    public String operarVm(@RequestParam Long id,
+                           @RequestParam String acao,
+                           RedirectAttributes redirectAttributes) {
+        try {
+            redirectAttributes.addFlashAttribute("mensagemSucesso", vdiService.operarInstancia(id, acao));
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("mensagemErro", e.getMessage());
+        }
+        return "redirect:/vdi";
     }
 }
