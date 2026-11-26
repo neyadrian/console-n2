@@ -11,7 +11,7 @@ public class InstanciaVdi {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String nome; 
+    private String nome;
 
     private String uuidVirtualBox;
     private String imagemBase = "BASE-LINUX-v1";
