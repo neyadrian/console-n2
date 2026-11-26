@@ -1,5 +1,6 @@
 package com.console.app.controllers;
 
+import com.console.app.models.InstanciaVdi;
 import com.console.app.repositories.ConfiguracaoVersaoRepository;
 import com.console.app.repositories.InstanciaVdiRepository;
 import com.console.app.security.RoleCheck;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 @Controller
 public class WebController {
