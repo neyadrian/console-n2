@@ -35,7 +35,7 @@ public class DhcpService {
 
     private static final Pattern HOSTNAME_PATTERN =
             Pattern.compile("^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,30}[a-zA-Z0-9])?$");
-    
+
     public Map<String, Object> obterEstadoDhcp() {
 
         Map<String, Object> dados = new HashMap<>();

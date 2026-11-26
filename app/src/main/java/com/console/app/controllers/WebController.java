@@ -36,6 +36,12 @@ public class WebController {
     @Autowired
     private AuditoriaService auditoriaService;
 
+    @Autowired
+    private DnsService dnsService;
+
+    @Autowired
+    private DhcpService dhcpService;
+
     @GetMapping("/login")
     public String login() {
         return "login";
@@ -151,5 +157,80 @@ public class WebController {
     public String viewAuditoria(Model model) {
         model.addAttribute("registros", auditoriaService.consultarLogsPorPermissao());
         return "auditoria";
+    }
+
+    @GetMapping("/dns")
+    public String viewDns(@RequestParam(value = "consulta", required = false, defaultValue = "site.empresa.test") String consulta,
+                          @RequestParam(value = "tipoConsulta", required = false, defaultValue = "A") String tipoConsulta,
+                          Model model) {
+        model.addAttribute("dns", dnsService.obterEstadoZona());
+        model.addAttribute("resultadoDig", dnsService.testarConsultaDig(consulta, tipoConsulta));
+        model.addAttribute("consultaAtual", consulta);
+        return "dns";
+    }
+
+    @PostMapping("/dns/operar/salvar")
+    public String salvarRegistroDns(@RequestParam String nome,
+                                    @RequestParam String tipo,
+                                    @RequestParam String valor,
+                                    RedirectAttributes redirectAttributes) {
+        try {
+            redirectAttributes.addFlashAttribute("mensagemSucesso", dnsService.salvarRegistro(nome, tipo, valor));
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("mensagemErro", e.getMessage());
+        }
+        return "redirect:/dns";
+    }
+
+    @PostMapping("/dns/operar/remover")
+    public String removerRegistroDns(@RequestParam String nome, RedirectAttributes redirectAttributes) {
+        try {
+            redirectAttributes.addFlashAttribute("mensagemSucesso", dnsService.removerRegistro(nome));
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("mensagemErro", e.getMessage());
+        }
+        return "redirect:/dns";
+    }
+
+    @PostMapping("/dns/operar/restaurar")
+    public String restaurarZonaDns(RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("mensagemSucesso", dnsService.restaurarBackupZona());
+        return "redirect:/dns";
+    }
+
+    // ================= MÓDULO DHCP (KEA) =================
+    @GetMapping("/dhcp")
+    public String viewDhcp(Model model) {
+        model.addAttribute("dhcp", dhcpService.obterEstadoDhcp());
+        return "dhcp";
+    }
+
+    @PostMapping("/dhcp/operar/reservar")
+    public String adicionarReservaDhcp(@RequestParam String mac,
+                                       @RequestParam String ip,
+                                       @RequestParam String hostname,
+                                       RedirectAttributes redirectAttributes) {
+        try {
+            redirectAttributes.addFlashAttribute("mensagemSucesso", dhcpService.adicionarReserva(mac, ip, hostname));
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("mensagemErro", e.getMessage());
+        }
+        return "redirect:/dhcp";
+    }
+
+    @PostMapping("/dhcp/operar/remover")
+    public String removerReservaDhcp(@RequestParam String mac, RedirectAttributes redirectAttributes) {
+        try {
+            redirectAttributes.addFlashAttribute("mensagemSucesso", dhcpService.removerReserva(mac));
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("mensagemErro", e.getMessage());
+        }
+        return "redirect:/dhcp";
+    }
+
+    @PostMapping("/dhcp/operar/restaurar")
+    public String restaurarConfigDhcp(RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("mensagemSucesso", dhcpService.restaurarBackupDhcp());
+        return "redirect:/dhcp";
     }
 }
