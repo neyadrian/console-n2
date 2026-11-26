@@ -4,6 +4,9 @@ import com.console.app.models.InstanciaVdi;
 import com.console.app.repositories.InstanciaVdiRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -11,12 +14,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +34,15 @@ public class VdiService {
 
     @Value("${vdi.agent.token:N2_VDI_HOST_TOKEN_2026}")
     private String vdiToken;
+
+    @Value("${ssh.host:192.168.100.10}")
+    private String debianHost;
+
+    @Value("${ssh.user:vboxuser}")
+    private String debianUser;
+
+    @Value("${ssh.password:123}")
+    private String debianPassword;
 
     @Autowired
     private InstanciaVdiRepository vdiRepository;
@@ -44,22 +58,17 @@ public class VdiService {
     private static final int COTA_MAX_POR_USUARIO = 1;
     private static final int CAPACIDADE_MAX_HOST = 2;
 
-    /**
-     * Admissão transacional: verifica cota, capacidade global, reserva recurso e aciona o agente no Windows.
-     */
     @Transactional
     public synchronized String solicitarNovaVm(String perfil) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String usuario = auth.getName();
 
-        // 1. Verifica cota do usuário (Teste T-VDI-02)
         long ativasUsuario = vdiRepository.countByProprietarioAndEstadoNotIn(usuario, List.of("FALHA", "EXCLUIDA"));
         if (ativasUsuario >= COTA_MAX_POR_USUARIO) {
             auditoriaService.registrar("VDI:COTA", "SOLICITAR_VM", "RECUSADO", "Cota excedida para " + usuario);
             throw new IllegalStateException("Cota excedida: cada usuário pode manter no máximo " + COTA_MAX_POR_USUARIO + " instância ativa.");
         }
 
-        // 2. Verifica capacidade total do host
         long ativasGlobal = vdiRepository.countByEstadoIn(List.of("SOLICITADA", "EM_CRIACAO", "INICIANDO", "DISPONIVEL"));
         if (ativasGlobal >= CAPACIDADE_MAX_HOST) {
             auditoriaService.registrar("VDI:HOST", "SOLICITAR_VM", "RECUSADO", "Capacidade máxima do host atingida");
@@ -112,9 +121,6 @@ public class VdiService {
         }
     }
 
-    /**
-     * Reconcilia estado com o VirtualBox e valida prontidão da porta RDP (3389).
-     */
     public void atualizarProntidao(InstanciaVdi vm) {
         if ("EXCLUIDA".equals(vm.getEstado()) || "FALHA".equals(vm.getEstado())) return;
         try {
@@ -132,12 +138,19 @@ public class VdiService {
                 JsonNode node = mapper.readTree(resp.body());
                 String estadoVbox = node.path("estado").asText();
                 String ip = node.path("ip").asText();
-                if (!ip.isEmpty()) vm.setIpAtribuido(ip);
+                String mac = node.path("mac").asText();
+
+                if (ip.isEmpty() && !mac.isEmpty()) {
+                    ip = buscarIpNoKeaDhcp(mac);
+                }
+                if (!ip.isEmpty()) {
+                    vm.setIpAtribuido(ip);
+                }
 
                 if ("poweroff".equals(estadoVbox) || "aborted".equals(estadoVbox)) {
                     vm.setEstado("DESLIGADA");
                 } else if ("running".equals(estadoVbox)) {
-                    if (!ip.isEmpty() && testarPortaRdp(ip, 3389)) {
+                    if (vm.getIpAtribuido() != null && !vm.getIpAtribuido().isEmpty() && testarPortaRdp(vm.getIpAtribuido(), 3389)) {
                         vm.setEstado("DISPONIVEL");
                     } else {
                         vm.setEstado("INICIANDO");
@@ -146,6 +159,36 @@ public class VdiService {
                 vdiRepository.save(vm);
             }
         } catch (Exception ignored) {}
+    }
+
+    private String buscarIpNoKeaDhcp(String macSemPontos) {
+        String clean = macSemPontos.replaceAll("[^0-9a-fA-F]", "").toLowerCase();
+        if (clean.length() != 12) return "";
+        String macFormatado = String.join(":", clean.split("(?<=\\G.{2})"));
+
+        Session session = null;
+        ChannelExec channel = null;
+        try {
+            JSch jsch = new JSch();
+            session = jsch.getSession(debianUser, debianHost, 22);
+            session.setPassword(debianPassword);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect(3000);
+
+            String cmd = "echo " + debianPassword + " | sudo -S grep -i '" + macFormatado + "' /var/lib/kea/kea-leases4.csv | tail -n 1 | cut -d',' -f1";
+            channel = (ChannelExec) session.openChannel("exec");
+            channel.setCommand(cmd);
+            InputStream in = channel.getInputStream();
+            channel.connect(3000);
+
+            String out = new String(in.readAllBytes(), StandardCharsets.UTF_8).trim();
+            return out.matches("\\d+\\.\\d+\\.\\d+\\.\\d+") ? out : "";
+        } catch (Exception e) {
+            return "";
+        } finally {
+            if (channel != null) channel.disconnect();
+            if (session != null) session.disconnect();
+        }
     }
 
     private boolean testarPortaRdp(String ip, int porta) {
@@ -157,9 +200,6 @@ public class VdiService {
         }
     }
 
-    /**
-     * Desliga ou exclui instância validando proprietário ou perfil ADMINISTRADOR (Teste T-VDI-04).
-     */
     public String operarInstancia(Long id, String acao) {
         InstanciaVdi vm = vdiRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Instância não encontrada."));

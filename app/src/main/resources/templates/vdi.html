@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Laboratório Virtual (VDI)</title>
+    <style>
+        body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; }
+        .card { background: #1e293b; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; border-bottom: 1px solid #334155; text-align: left; }
+        button { padding: 8px 14px; cursor: pointer; border-radius: 4px; border: none; background: #2563eb; color: white; }
+        button.danger { background: #dc2626; }
+        .msg-ok { background: #065f46; padding: 10px; border-radius: 4px; margin-bottom: 12px; }
+        .msg-err { background: #991b1b; padding: 10px; border-radius: 4px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+<h2>Laboratório Virtual Sob Demanda (VDI)</h2>
+<p><a href="/dashboard" style="color:#93c5fd;">← Voltar ao Dashboard</a> | <a href="/vdi" style="color:#93c5fd;">↻ Atualizar Status</a></p>
+
+<div th:if="${mensagemSucesso}" class="msg-ok" th:text="${mensagemSucesso}"></div>
+<div th:if="${mensagemErro}" class="msg-err" th:text="${mensagemErro}"></div>
+
+<div class="card">
+    <h3>Solicitar Nova Máquina Virtual</h3>
+    <form th:action="@{/vdi/solicitar}" method="post">
+        <label>Perfil de Hardware:</label>
+        <select name="perfil">
+            <option value="BASICO">Básico (1 vCPU / 2 GiB RAM)</option>
+            <option value="AVANCADO">Avançado (2 vCPUs / 4 GiB RAM)</option>
+        </select>
+        <button type="submit">Provisionar Desktop</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Instâncias Provisionadas</h3>
+    <table>
+        <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Proprietário</th>
+            <th>Perfil</th>
+            <th>Estado</th>
+            <th>IP / Acesso RDP</th>
+            <th>Ações</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="vm : ${instancias}">
+            <td th:text="${vm.nome}"></td>
+            <td th:text="${vm.proprietario}"></td>
+            <td th:text="${vm.perfil}"></td>
+            <td th:text="${vm.estado}"></td>
+            <td th:text="${vm.ipAtribuido != null ? vm.ipAtribuido + ':3389' : 'Aguardando DHCP...'}"></td>
+            <td>
+                <form th:action="@{/vdi/operar}" method="post" style="display:inline;">
+                    <input type="hidden" name="id" th:value="${vm.id}"/>
+                    <input type="hidden" name="acao" value="desligar"/>
+                    <button type="submit">Desligar</button>
+                </form>
+                <form th:action="@{/vdi/operar}" method="post" style="display:inline;">
+                    <input type="hidden" name="id" th:value="${vm.id}"/>
+                    <input type="hidden" name="acao" value="excluir"/>
+                    <button type="submit" class="danger" onclick="return confirm('Excluir permanentemente esta VM?')">Excluir</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
