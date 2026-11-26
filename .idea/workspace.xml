@@ -5,7 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f8bbb83a-3d6c-4864-affa-6731a65b4f9e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/ServicoConfigService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/console/app/services/DnsService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -19,7 +19,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="54" />
+    <option name="cachedIndexableFilesCount" value="55" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -141,7 +141,8 @@
       <workItem from="1794397125189" duration="6285000" />
       <workItem from="1795608183657" duration="1253000" />
       <workItem from="1795623139181" duration="6538000" />
-      <workItem from="1795649441301" duration="602000" />
+      <workItem from="1795649441301" duration="2193000" />
+      <workItem from="1795691332395" duration="317000" />
     </task>
     <servers />
   </component>
